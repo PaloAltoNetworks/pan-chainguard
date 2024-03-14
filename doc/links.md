@@ -6,9 +6,9 @@ graph TD
     panos2{{"PAN-OS NGFW, Panorama<br/>Update Device Certificates"}}
     truststore[(trust-store.tgz)]
     truststoredir[(trust-store/)]
+    fling(fling.py)
     chain(chain.py)
     guard(guard.py)
-    fling(fling.py)
     curl(curl)
     untar(untar)
     fingerprints(cert-fingerprints.sh)
@@ -16,16 +16,16 @@ graph TD
     ccadb[("CCADB</br>All Certificate Information")]
     certificates[(certificates.tgz)]
 
-    panos<-->|XML API|chain
-    untar-->truststoredir
+    panos<-->|XML API|fling
+    fling-->truststore
     truststore-->untar
-    chain-->truststore
+    untar-->truststoredir
+    truststoredir-->fingerprints
     fingerprints-->fingerprintscsv
     curl-->ccadb
-    ccadb-->guard
-    fingerprintscsv-->guard
-    truststoredir-->fingerprints
-    guard-->certificates
-    certificates-->fling
-    fling<-->|XML API|panos2
+    ccadb-->chain
+    fingerprintscsv-->chain
+    chain-->certificates
+    certificates-->guard
+    guard<-->|XML API|panos2
 ```
