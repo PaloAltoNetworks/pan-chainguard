@@ -35,7 +35,7 @@ except ImportError:
 libpath = os.path.dirname(os.path.abspath(__file__))
 sys.path[:0] = [os.path.join(libpath, os.pardir)]
 
-from pancg import (title, __version__)
+from pan_chainguard import (title, __version__)
 
 args = None
 

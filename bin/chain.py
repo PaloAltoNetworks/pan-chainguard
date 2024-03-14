@@ -32,8 +32,8 @@ import time
 libpath = os.path.dirname(os.path.abspath(__file__))
 sys.path[:0] = [os.path.join(libpath, os.pardir)]
 
-from pancg import (title, __version__)
-from pancg.crtsh import (ArgsError, CrtShApi)
+from pan_chainguard import (title, __version__)
+from pan_chainguard.crtsh import (ArgsError, CrtShApi)
 
 ROOT = 'root'
 INTERMEDIATE = 'intermediate'
