@@ -152,7 +152,7 @@ script:
     ``cert-fingerprints.sh``
 
   + The Version 2 All Certificate Information (root and
-    intermediate) in CCADB CSV file (`AllCertificateRecordsCSVFormatv2
+    intermediate) CCADB CSV file (`AllCertificateRecordsCSVFormatv2
     <https://www.ccadb.org/resources>`_)
 
   and creates a tar archive containing the intermediate certificate
@@ -197,13 +197,11 @@ role based admin for the XML API operations.  The following PAN-OS
 configuration creates a ``chainguard-api`` role and ``chainguard``
 admin::
 
-   set shared admin-role chainguard-api role device webui
    set shared admin-role chainguard-api role device xmlapi config enable
    set shared admin-role chainguard-api role device xmlapi op enable
    set shared admin-role chainguard-api role device xmlapi commit enable
    set shared admin-role chainguard-api role device xmlapi export enable
    set shared admin-role chainguard-api role device xmlapi import enable
-   set shared admin-role chainguard-api role device restapi
 
    set mgt-config users chainguard permissions role-based custom profile chainguard-api
    set mgt-config users chainguard password
@@ -383,7 +381,7 @@ version.
    download CA 0021_OISTE_WISeKey_Global_Root_GB_CA intermediates 1
    [...]
 
-Review ``/tmp/stderr.txt`` for errors; in the normal case it will be
+Review ``tmp/stderr.txt`` for errors; in the normal case it will be
 empty:
 
 ::
