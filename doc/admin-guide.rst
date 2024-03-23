@@ -202,9 +202,14 @@ admin::
    set shared admin-role chainguard-api role device xmlapi commit enable
    set shared admin-role chainguard-api role device xmlapi export enable
    set shared admin-role chainguard-api role device xmlapi import enable
+   set shared admin-role chainguard-api role device webui
+   set shared admin-role chainguard-api role device restapi
 
    set mgt-config users chainguard permissions role-based custom profile chainguard-api
    set mgt-config users chainguard password
+
+.. note:: Also ensure access to all *Web UI* (webui) and *REST API*
+          (restapi) features are disabled.
 
 When using ``guard.py`` to commit the configuration, the ``--admin``
 option should be used to specify the ``pan-chainguard`` specific admin
