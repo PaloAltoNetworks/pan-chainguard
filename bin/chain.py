@@ -76,7 +76,7 @@ async def main_loop():
 
     errors, certificates = await get_cert_files(panos)
     if errors:
-        print('Warning: %d certificates were not downloaded')
+        print('Error: %d certificates were not downloaded' % errors)
 
     if False and args.verbose:
         print('PAN-OS certificates', pprint.pformat(certificates),
