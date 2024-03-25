@@ -47,9 +47,9 @@ def main():
     global args
     args = parse_args()
 
-    asyncio.run(main_loop())
+    ret = asyncio.run(main_loop())
 
-    sys.exit(0)
+    sys.exit(ret)
 
 
 async def main_loop():
@@ -83,6 +83,8 @@ async def main_loop():
               file=sys.stderr)
 
     create_archive(certificates)
+
+    return 2 if errors else 0
 
 
 def get_certs():
