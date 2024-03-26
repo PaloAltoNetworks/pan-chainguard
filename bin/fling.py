@@ -77,8 +77,8 @@ async def main_loop():
     for cert_name, filename in get_trusted_certs(xapi):
         if args.verbose:
             print('Exporting %s => %s' % (cert_name, filename))
-        filename2, content = export_cert(xapi, cert_name)
-        if filename2 is not None:
+        _, content = export_cert(xapi, cert_name)
+        if content is not None:
             store[filename] = content
 
     total = create_archive(store)
