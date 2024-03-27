@@ -262,16 +262,18 @@ async def download(api, sequence, sha256):
             resp = await api.download(id=sha256[1])
 
             if resp.status == 429:
-                x = '%d %s' % (resp.status, resp.reason)
+                x = '%d %s %s %s' % (
+                    resp.status, resp.reason, sequence, sha256[1])
                 if tries == MAX_TRIES:
-                    print('no retry after try %d, %s' % (tries, x),
+                    print('no retry after try %d %s' % (tries, x),
                           file=sys.stderr)
+                    x = 'download failed ' + x
                     break
-                print('retry after try %d, %s' % (tries, x),
+                print('retry after try %d %s' % (tries, x),
                       file=sys.stderr)
                 await asyncio.sleep(RETRY_SLEEP)
             elif resp.status != 200:
-                x = 'download %d %s %s %s' % (
+                x = 'download failed %d %s %s %s' % (
                     resp.status, resp.reason, sequence, sha256[1])
                 break
             else:
@@ -289,10 +291,11 @@ async def download(api, sequence, sha256):
                     x = 'content malformed %s %s %s' % (
                         sequence, sha256[1], content)
                     if tries == MAX_TRIES:
-                        print('no retry after try %d, %s' % (tries, x),
+                        print('no retry after try %d %s' % (tries, x),
                               file=sys.stderr)
+                        x = 'download failed ' + x
                         break
-                    print('retry after try %d, %s' % (tries, x),
+                    print('retry after try %d %s' % (tries, x),
                           file=sys.stderr)
                     await asyncio.sleep(RETRY_SLEEP)
 
@@ -300,12 +303,13 @@ async def download(api, sequence, sha256):
                 asyncio.CancelledError,  # XXX
                 aiohttp.ClientError) as e:
             msg = e if str(e) else type(e).__name__
-            x = 'CrtShApi: %s: %s %s' % (msg, sequence, sha256[1])
+            x = 'CrtShApi: %s %s %s' % (msg, sequence, sha256[1])
             if tries == MAX_TRIES:
-                print('no retry after try %d, %s' % (tries, x),
+                print('no retry after try %d %s' % (tries, x),
                       file=sys.stderr)
+                x = 'download failed ' + x
                 break
-            print('retry after try %d, %s' % (tries, x),
+            print('retry after try %d %s' % (tries, x),
                   file=sys.stderr)
             # no sleep
 
@@ -341,8 +345,8 @@ async def process_roots(api, roots):
         sequence_friendly = sequence
         if sequence.endswith('.cer'):
             sequence_friendly = sequence[:-4]
-        print('download CA %s intermediates %d' % (sequence_friendly,
-                                                   len(roots[sequence][1:])),
+        print('download %s intermediates %d' % (sequence_friendly,
+                                                len(roots[sequence][1:])),
               flush=True)
 
         for sha256 in roots[sequence]:

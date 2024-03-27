@@ -376,14 +376,14 @@ version.
    Invalid PAN-OS certificate 0305_E-Tugra_Certification_Authority.cer: Expired (valid to 2023.03.03) B0BFD52BB0D7D9BD92BF5D4DC13DA255C02C542F378365EA893911F55E55F23C E-Tugra Certification Authority
    Invalid PAN-OS certificate 0324_A-Trust-Root-05.cer: Expired (valid to 2023.09.20) 2DDE9D0C0A90E7B32B5ABC01F41799D42E95A1E3C31C3B39373BB8141EA54471 A-Trust-Root-05
    179 intermediate chains found for 276 PAN-OS trusted CAs
-   download CA 0001_Hellenic_Academic_and_Research_Institutions_RootCA_2011 intermediates 1
-   download CA 0003_USERTrust_ECC_Certification_Authority intermediates 1
-   download CA 0012_Hellenic_Academic_and_Research_Institutions_RootCA_2015 intermediates 1
-   download CA 0014_EE_Certification_Centre_Root_CA intermediates 1
-   download CA 0016_ePKI_Root_Certification_Authority intermediates 1
-   download CA 0017_thawte_Primary_Root_CA_-_G2 intermediates 1
-   download CA 0019_GeoTrust_Universal_CA_2 intermediates 1
-   download CA 0021_OISTE_WISeKey_Global_Root_GB_CA intermediates 1
+   download 0001_Hellenic_Academic_and_Research_Institutions_RootCA_2011 intermediates 1
+   download 0003_USERTrust_ECC_Certification_Authority intermediates 1
+   download 0012_Hellenic_Academic_and_Research_Institutions_RootCA_2015 intermediates 1
+   download 0014_EE_Certification_Centre_Root_CA intermediates 1
+   download 0016_ePKI_Root_Certification_Authority intermediates 1
+   download 0017_thawte_Primary_Root_CA_-_G2 intermediates 1
+   download 0019_GeoTrust_Universal_CA_2 intermediates 1
+   download 0021_OISTE_WISeKey_Global_Root_GB_CA intermediates 1
    [...]
 
 Review ``tmp/stderr.txt`` for errors; in the normal case it will be
