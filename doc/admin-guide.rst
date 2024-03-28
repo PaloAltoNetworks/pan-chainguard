@@ -386,8 +386,18 @@ version.
    download 0021_OISTE_WISeKey_Global_Root_GB_CA intermediates 1
    [...]
 
-Review ``tmp/stderr.txt`` for errors; in the normal case it will be
-empty:
+``chain.py`` exits with the following status codes:
+
+===========  =========
+Status Code  Condition
+===========  =========
+0            success, all certificates were downloaded
+1            fatal error
+2            error, some certificates were not downloaded
+===========  =========
+
+Review ``tmp/stderr.txt`` for warnings and errors; in the normal case
+it will be empty:
 
 ::
 
