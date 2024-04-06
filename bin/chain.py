@@ -245,7 +245,7 @@ async def get_panos_intermediates(chains, invalid):
                                 (INTERMEDIATE, x))
 
         except OSError as e:
-            print('%s: %s' % (args.ccadb, e), file=sys.stderr)
+            print('%s: %s' % (args.fingerprints, e), file=sys.stderr)
             sys.exit(1)
 
     return total, total_invalid, intermediates
