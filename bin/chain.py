@@ -256,12 +256,18 @@ async def download(api, sequence, sha256):
     MAX_TRIES = 5
     RETRY_SLEEP = 5.0
 
+    RETRY_STATUS = [
+        429,  # Too Many Requests
+        502,  # Bad Gateway
+        504,  # Gateway Time-out
+    ]
+
     while True:
         tries += 1
         try:
             resp = await api.download(id=sha256[1])
 
-            if resp.status == 429:
+            if resp.status in RETRY_STATUS:
                 x = '%d %s %s %s' % (
                     resp.status, resp.reason, sequence, sha256[1])
                 if tries == MAX_TRIES:
