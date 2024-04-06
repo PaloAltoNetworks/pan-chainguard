@@ -394,7 +394,7 @@ async def run_tasks(tasks, certificates):
         filename, content, sequence, cert_type = await coro
         if filename is None:
             # error
-            print(content)
+            print(content, file=sys.stderr)
             errors += 1
         else:
             certificates[sequence].append((cert_type, filename, content))
