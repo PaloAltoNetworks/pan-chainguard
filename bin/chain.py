@@ -224,6 +224,7 @@ def follow(chain, k, parents):
 
 async def get_panos_intermediates(certs, chains, invalid):
     intermediates = {}
+    not_in_common_store = {}
     total = 0
     total_invalid = 0
 
@@ -247,6 +248,15 @@ async def get_panos_intermediates(certs, chains, invalid):
                             'Not found in CCADB'), file=sys.stderr)
                         total_invalid += 1
                         continue
+                    else:
+                        status_root = certs[sha256]['Status of Root Cert']
+                        statuses = status_root.split(';')
+                        included = [': Included' in x for x in statuses]
+                        if not any(included):
+                            not_in_common_store[sha256] = status_root
+                            print('PAN-OS certificate not in common root store'
+                                  ' %s: %s' % (row['filename'], status_root),
+                                  file=sys.stderr)
 
                     total += 1
                     if sha256 in chains:
@@ -254,6 +264,11 @@ async def get_panos_intermediates(certs, chains, invalid):
                         for x in chains[sha256][1:]:
                             intermediates[row['filename']].append(
                                 (INTERMEDIATE, x))
+                    elif args.verbose:
+                        x = '%s %s' % (row['filename'], 'intermediates 0')
+                        if sha256 in not_in_common_store:
+                            x += ' (not in common root store)'
+                        print(x, file=sys.stderr)
 
         except OSError as e:
             print('%s: %s' % (args.fingerprints, e), file=sys.stderr)
