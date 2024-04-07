@@ -55,7 +55,7 @@ def main():
 async def main_loop():
     create_archive(test=True)
 
-    invalid, roots, intermediates, parents = get_certs()
+    certs, invalid, roots, intermediates, parents = get_certs()
     if args.verbose:
         print('roots %d, intermediates %d, parents %d' %
               (len(roots), len(intermediates), len(parents)))
@@ -67,7 +67,8 @@ async def main_loop():
               file=sys.stderr)
 
     total, total_invalid, panos = await get_panos_intermediates(
-        chains, invalid)
+        certs, chains, invalid)
+    print('%d invalid PAN-OS certificates found' % total_invalid)
     print('%d intermediate chains found for %d PAN-OS trusted CAs' % (
         len(panos), total))
     if args.verbose:
@@ -183,7 +184,7 @@ def get_certs():
                                       x['Salesforce Record ID']),
                       file=sys.stderr)
 
-    return invalid, roots, intermediates, parents
+    return certs, invalid, roots, intermediates, parents
 
 
 def get_cert_chains(roots, intermediates, parents):
@@ -218,7 +219,7 @@ def follow(chain, k, parents):
             follow(chain, child, parents)
 
 
-async def get_panos_intermediates(chains, invalid):
+async def get_panos_intermediates(certs, chains, invalid):
     intermediates = {}
     total = 0
     total_invalid = 0
@@ -233,7 +234,14 @@ async def get_panos_intermediates(chains, invalid):
                     if sha256 in invalid:
                         print('Invalid PAN-OS certificate %s: %s' % (
                             row['filename'],
-                            invalid[sha256]))
+                            invalid[sha256]), file=sys.stderr)
+                        total_invalid += 1
+                        continue
+
+                    if sha256 not in certs:
+                        print('Invalid PAN-OS certificate %s: %s' % (
+                            row['filename'],
+                            'Not found in CCADB'), file=sys.stderr)
                         total_invalid += 1
                         continue
 
