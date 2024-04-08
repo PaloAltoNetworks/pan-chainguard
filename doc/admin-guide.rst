@@ -464,10 +464,21 @@ PAN-OS Trusted CA Store Updates
 -------------------------------
 
 The PAN-OS Trusted CA Store is updated as part of a PAN-OS software
-release; it is not currently managed by content updates.  The
-certificate store was updated on PAN-OS 10.0, and 10.0, 10.1 and 10.2
-contain the same store.  The certificate store was last updated on
-PAN-OS 11.0, and 11.0 and 11.1 contain the same store.
+release; it is not currently managed by content updates.
+
+PAN-OS 10.x CA Store
+~~~~~~~~~~~~~~~~~~~~
+
+The certificate store was updated for PAN-OS 10.0, which was released
+in July 2020.  All 10.x.x releases contain the same store (10.0.x,
+10.1.x and 10.2.x).
+
+PAN-OS 11.x CA Store
+~~~~~~~~~~~~~~~~~~~~
+
+The certificate store was updated for PAN-OS 11.0, which was released
+in November 2022.  All 11.x.x releases contain the same store (11.0.x
+and 11.1.x).
 
 About the Name
 --------------
