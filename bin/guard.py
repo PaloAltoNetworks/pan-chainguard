@@ -280,7 +280,7 @@ def commit(xapi):
         partial.append(policy_and_objects)
 
     cmd = etree.tostring(root).decode()
-    if args.verbose:
+    if args.debug:
         print(cmd, file=sys.stderr)
 
     kwargs = {
@@ -288,9 +288,10 @@ def commit(xapi):
         'sync': True,
     }
 
-    print('commit config for admin %s' % args.admin)
-    api_request(xapi, xapi.commit, kwargs, 'success')
     if args.verbose:
+        print('commit config for admin %s' % args.admin)
+    api_request(xapi, xapi.commit, kwargs, 'success')
+    if args.debug:
         print(xapi.xml_root(), file=sys.stderr)
 
     if xapi.status_code is not None:
@@ -299,7 +300,7 @@ def commit(xapi):
         code = ''
     if xapi.status is not None:
         print('commit: %s%s' % (xapi.status, code), end='')
-    if xapi.status_detail is not None:
+    if args.verbose and xapi.status_detail is not None:
         print(': "%s"' % xapi.status_detail.rstrip(), end='')
     print()
 
@@ -356,6 +357,11 @@ def parse_args():
     parser.add_argument('--verbose',
                         action='store_true',
                         help='enable verbosity')
+    parser.add_argument('--debug',
+                        type=int,
+                        choices=[0, 1, 2, 3],
+                        default=0,
+                        help='enable debug')
     x = '%s %s' % (title, __version__)
     parser.add_argument('--version',
                         action='version',
@@ -363,7 +369,7 @@ def parse_args():
                         version=x)
     args = parser.parse_args()
 
-    if args.verbose:
+    if args.debug:
         print(args, file=sys.stderr)
 
     return args

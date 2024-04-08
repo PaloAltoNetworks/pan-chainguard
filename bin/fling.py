@@ -189,6 +189,11 @@ def parse_args():
     parser.add_argument('--verbose',
                         action='store_true',
                         help='enable verbosity')
+    parser.add_argument('--debug',
+                        type=int,
+                        choices=[0, 1, 2, 3],
+                        default=0,
+                        help='enable debug')
     x = '%s %s' % (title, __version__)
     parser.add_argument('--version',
                         action='version',
@@ -196,7 +201,7 @@ def parse_args():
                         version=x)
     args = parser.parse_args()
 
-    if args.verbose:
+    if args.debug:
         print(args, file=sys.stderr)
 
     return args

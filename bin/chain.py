@@ -56,12 +56,12 @@ async def main_loop():
     create_archive(test=True)
 
     certs, invalid, roots, intermediates, parents = get_certs()
-    if args.verbose:
+    if args.debug:
         print('roots %d, intermediates %d, parents %d' %
               (len(roots), len(intermediates), len(parents)))
 
     chains = get_cert_chains(roots, intermediates, parents)
-    if args.verbose:
+    if args.debug > 1:
         print('chains %d (root=>intermediates)' % len(chains),
               pprint.pformat(chains),
               file=sys.stderr)
@@ -71,7 +71,7 @@ async def main_loop():
     print('%d invalid PAN-OS certificates found' % total_invalid)
     print('%d intermediate chains found for %d PAN-OS trusted CAs' % (
         len(panos), total))
-    if args.verbose:
+    if args.debug > 1:
         print('PAN-OS intermediate chains', pprint.pformat(panos),
               file=sys.stderr)
 
@@ -82,7 +82,7 @@ async def main_loop():
         print('All %d certificate chains were downloaded successfully'
               % len(certificates))
 
-    if False and args.verbose:
+    if args.debug > 2:
         print('PAN-OS certificates', pprint.pformat(certificates),
               file=sys.stderr)
 
@@ -112,7 +112,7 @@ def get_certs():
                     x = '%s %s %s' % (row['Revocation Status'],
                                       sha256,
                                       row['Certificate Name'])
-                    if args.verbose:
+                    if args.debug > 1:
                         print(x, file=sys.stderr)
                     invalid[sha256] = x
                     continue
@@ -127,7 +127,7 @@ def get_certs():
                         row['Valid From (GMT)'],
                         sha256,
                         row['Certificate Name'])
-                    if args.verbose:
+                    if args.debug > 1:
                         print(x, file=sys.stderr)
                     invalid[sha256] = x
                     continue
@@ -137,7 +137,7 @@ def get_certs():
                         row['Valid To (GMT)'],
                         sha256,
                         row['Certificate Name'])
-                    if args.verbose:
+                    if args.debug > 1:
                         print(x, file=sys.stderr)
                     invalid[sha256] = x
                     continue
@@ -166,7 +166,7 @@ def get_certs():
                     parent_sha256 = row['Parent SHA-256 Fingerprint']
                     if not parent_sha256:
                         x = 'Intermediate with no parent: %s' % sha256
-                        if args.verbose:
+                        if args.debug > 1:
                             print(x, file=sys.stderr)
                             invalid[sha256] = x
                         continue
@@ -178,7 +178,7 @@ def get_certs():
         print('%s: %s' % (args.ccadb, e), file=sys.stderr)
         sys.exit(1)
 
-    if args.verbose:
+    if args.debug:
         for sha256 in duplicates:
             print('Duplicate certificates %s' % sha256, file=sys.stderr)
             for x in duplicates[sha256]:
@@ -195,7 +195,7 @@ def get_cert_chains(roots, intermediates, parents):
 
     for k in roots:
         if k not in parents:
-            if args.verbose:
+            if args.debug:
                 print('Root with no child %s' % k,
                       file=sys.stderr)
             continue
@@ -203,7 +203,7 @@ def get_cert_chains(roots, intermediates, parents):
         for child in parents[k]:
             chain = [k]
             follow(chain, child, parents)
-            if args.verbose:
+            if args.debug > 1:
                 print('chain[%d]:' % len(chain),
                       pprint.pformat(chain), file=sys.stderr)
 
@@ -213,7 +213,7 @@ def get_cert_chains(roots, intermediates, parents):
 
 
 def follow(chain, k, parents):
-    if args.verbose:
+    if args.debug > 1:
         print('follow[%d]:' % len(chain), k, file=sys.stderr)
 
     chain.append(k)
@@ -377,9 +377,10 @@ async def process_roots(api, roots):
         sequence_friendly = sequence
         if sequence.endswith('.cer'):
             sequence_friendly = sequence[:-4]
-        print('download %s intermediates %d' % (sequence_friendly,
-                                                len(roots[sequence][1:])),
-              flush=True)
+        if args.verbose:
+            print('download %s intermediates %d' % (
+                sequence_friendly,
+                len(roots[sequence][1:])))
 
         for sha256 in roots[sequence]:
             if not args.roots and sha256[0] == ROOT:
@@ -394,7 +395,7 @@ async def process_roots(api, roots):
     if len(tasks):
         errors += await run_tasks(tasks, certificates)
 
-    if args.verbose:
+    if args.debug:
         end = time.time()
         elapsed = end - start
         mins = elapsed // 60
@@ -411,7 +412,7 @@ async def run_tasks(tasks, certificates):
     INTERVAL_WAIT = 3.3  # random throttle sweet spot to avoid TimeoutError
     errors = 0
 
-    if args.verbose:
+    if args.debug:
         print('running %d tasks' % len(tasks),
               file=sys.stderr)
         start = time.time()
@@ -425,7 +426,7 @@ async def run_tasks(tasks, certificates):
         else:
             certificates[sequence].append((cert_type, filename, content))
 
-    if args.verbose:
+    if args.debug:
         end = time.time()
         elapsed = end - start
         rate = len(tasks) / elapsed
@@ -487,6 +488,11 @@ def parse_args():
     parser.add_argument('--verbose',
                         action='store_true',
                         help='enable verbosity')
+    parser.add_argument('--debug',
+                        type=int,
+                        choices=[0, 1, 2, 3],
+                        default=0,
+                        help='enable debug')
     x = '%s %s' % (title, __version__)
     parser.add_argument('--version',
                         action='version',
@@ -494,7 +500,7 @@ def parse_args():
                         version=x)
     args = parser.parse_args()
 
-    if args.verbose:
+    if args.debug:
         print(args, file=sys.stderr)
 
     return args

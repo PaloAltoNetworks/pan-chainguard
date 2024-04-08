@@ -237,6 +237,7 @@ fling.py Usage
      --certs PATH        PAN-OS trusted CAs archive path (default: trust-store.tgz)
      --xdebug {0,1,2,3}  pan.xapi debug
      --verbose           enable verbosity
+     --debug {0,1,2,3}   enable debug
      --version           display version
 
 fling.py Example
@@ -250,7 +251,7 @@ fling.py Example
    $ mkdir -p tmp/trust-store
 
    $ bin/fling.py --tag pa-460-chainguard --certs tmp/trust-store/trust-store.tgz
-   Exported 288 PAN-OS trusted CAs to tmp/trust-store/trust-store.tgz
+   Exported 293 PAN-OS trusted CAs to tmp/trust-store/trust-store.tgz
 
    $ cd tmp/trust-store/
    $ tar xzf trust-store.tgz
@@ -321,6 +322,7 @@ chain.py Usage
      --certs PATH          certificate archive path (default: certificates.tgz)
      --roots               also download root CAs (experimental)
      --verbose             enable verbosity
+     --debug {0,1,2,3}     enable debug
      --version             display version
 
 chain.py Example
@@ -362,29 +364,14 @@ version.
 
    $ cd ..
 
-   $ bin/chain.py --ccadb tmp/AllCertificateRecordsReport.csv --fingerprints tmp/cert-fingerprints.csv --certs tmp/certificates.tgz 2>tmp/stderr.txt
-   Invalid PAN-OS certificate 0008_VRK_Gov._Root_CA.cer: Expired (valid to 2023.12.18) F008733EC500DC498763CC9264C6FCEA40EC22000E927D053CE9C90BFA046CB2 VRK Gov. Root CA
-   Invalid PAN-OS certificate 0020_Staat_der_Nederlanden_EV_Root_CA.cer: Expired (valid to 2022.12.08) 4D2491414CFE956746EC4CEFA6CF6F72E28A1329432F9D8A907AC4CB5DADC15A Staat der Nederlanden EV Root CA
-   Invalid PAN-OS certificate 0026_Izenpe.com.cer: Revoked 23804203CA45D8CDE716B8C13BF3B448457FA06CC10250997FA01458317C41E5 Izenpe.com
-   Invalid PAN-OS certificate 0035_TRKTRUST_Elektronik_Sertifika_Hizmet_Salaycs_H5.cer: Expired (valid to 2023.04.28) 49351B903444C185CCDC5C693D24D8555CB208D6A8141307699F4AF063199D78 TÜRKTRUST Elektronik Sertifika Hizmet Sağlayıcısı H5
-   Invalid PAN-OS certificate 0057_Security_Communication_RootCA1.cer: Expired (valid to 2023.09.30) E75E72ED9F560EEC6EB4800073A43FC3AD19195A392282017895974A99026B6C SECOM Trust.net - Security Communication RootCA1
-   Invalid PAN-OS certificate 0125_ACNLB.cer: Expired (valid to 2023.05.15) 894CE6DDB012CB3F736954668DE63F436080E95F17B7A81BD924EB21BEE9E440 ACNLB
-   Invalid PAN-OS certificate 0153_Trustis_FPS_Root_CA.cer: Expired (valid to 2024.01.21) C1B48299ABA5208FE9630ACE55CA68A03EDA5A519C8802A0D3A673BE8F8E557D Trustis Limited - Trustis FPS Root CA
-   Invalid PAN-OS certificate 0201_POSTArCA.cer: Expired (valid to 2023.02.07) 007E452FD5CF838946696DFE37A2DB2EF3991436D27BCBAB45922053C15A87A8 POSTarCA
-   Invalid PAN-OS certificate 0231_Autoridade_Certificadora_Raiz_Brasileira_v2.cer: Expired (valid to 2023.06.21) FB47D92A9909FD4FA9BEC02737543E1F3514CED747407A8D9CFA397B0915067C Autoridade Certificadora Raiz Brasileira v2
-   Invalid PAN-OS certificate 0244_Hongkong_Post_Root_CA_1.cer: Expired (valid to 2023.05.15) F9E67D336C51002AC054C632022D66DDA2E7E3FFF10AD061ED31D8BBB410CFB2 Hongkong Post Root CA 1
-   Invalid PAN-OS certificate 0305_E-Tugra_Certification_Authority.cer: Expired (valid to 2023.03.03) B0BFD52BB0D7D9BD92BF5D4DC13DA255C02C542F378365EA893911F55E55F23C E-Tugra Certification Authority
-   Invalid PAN-OS certificate 0324_A-Trust-Root-05.cer: Expired (valid to 2023.09.20) 2DDE9D0C0A90E7B32B5ABC01F41799D42E95A1E3C31C3B39373BB8141EA54471 A-Trust-Root-05
-   179 intermediate chains found for 276 PAN-OS trusted CAs
-   download 0001_Hellenic_Academic_and_Research_Institutions_RootCA_2011 intermediates 1
-   download 0003_USERTrust_ECC_Certification_Authority intermediates 1
-   download 0012_Hellenic_Academic_and_Research_Institutions_RootCA_2015 intermediates 1
-   download 0014_EE_Certification_Centre_Root_CA intermediates 1
-   download 0016_ePKI_Root_Certification_Authority intermediates 1
-   download 0017_thawte_Primary_Root_CA_-_G2 intermediates 1
-   download 0019_GeoTrust_Universal_CA_2 intermediates 1
-   download 0021_OISTE_WISeKey_Global_Root_GB_CA intermediates 1
-   [...]
+   $ bin/chain.py --ccadb tmp/AllCertificateRecordsReport.csv --fingerprints tmp/cert-fingerprints.csv \
+   > --certs tmp/certificates.tgz 2>tmp/stderr.txt
+   19 invalid PAN-OS certificates found
+   182 intermediate chains found for 274 PAN-OS trusted CAs
+   All 182 certificate chains were downloaded successfully
+
+   $ echo $?
+   0
 
 ``chain.py`` exits with the following status codes:
 
@@ -396,13 +383,7 @@ Status Code  Condition
 2            error, some certificates were not downloaded
 ===========  =========
 
-Review ``tmp/stderr.txt`` for warnings and errors; in the normal case
-it will be empty:
-
-::
-
-   $ ls -l tmp/stderr.txt
-   -rw-r--r--  1 ksteves  ksteves  0 Mar 11 16:15 tmp/stderr.txt
+Review ``tmp/stderr.txt`` for warnings and errors.
 
 The tar archive uses the following directory structure:
 
@@ -447,6 +428,7 @@ guard.py Usage
      --admin ADMIN       commit admin
      --xdebug {0,1,2,3}  pan.xapi debug
      --verbose           enable verbosity
+     --debug {0,1,2,3}   enable debug
      --version           display version
 
 guard.py Example
@@ -476,14 +458,7 @@ multi-vsys firewalls.
    > --delete --add --commit
    201 certificates deleted
    201 intermediate certificates added
-   commit config for admin chainguard
-   commit: success: "Partial changes to commit: changes to configuration by all administrators
-   Changes to vsys configuration: (vsys2)
-   Configuration committed successfully
-   Local configuration size: 617 KB
-   Predefined configuration size: 17 MB
-   Merged configuration size(local, panorama pushed, predefined): 18 MB
-   Maximum recommended merged configuration size: 35 MB (51% configured)"
+   commit: success
 
 PAN-OS Trusted CA Store Updates
 -------------------------------
