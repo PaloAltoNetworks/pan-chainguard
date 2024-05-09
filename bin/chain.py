@@ -145,7 +145,8 @@ def get_certs():
                 derived_trust_bits = row['Derived Trust Bits']
                 if (derived_trust_bits and 'Server Authentication' not in
                    derived_trust_bits.split(';')):
-                    x = 'Missing Server Authentication %s' % sha256
+                    x = 'Missing Server Authentication (%s) %s' % (
+                        derived_trust_bits, sha256)
                     invalid[sha256] = x
                     continue
 
