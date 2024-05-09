@@ -55,7 +55,7 @@ def main():
 async def main_loop():
     create_archive(test=True)
 
-    certs, invalid, roots, intermediates, parents = get_certs()
+    certs, invalid, warning, roots, intermediates, parents = get_certs()
     if args.debug:
         print('roots %d, intermediates %d, parents %d' %
               (len(roots), len(intermediates), len(parents)))
@@ -67,7 +67,7 @@ async def main_loop():
               file=sys.stderr)
 
     total, total_invalid, panos = await get_panos_intermediates(
-        certs, chains, invalid)
+        certs, chains, invalid, warning)
     print('%d invalid PAN-OS certificates found' % total_invalid)
     print('%d intermediate chains found for %d PAN-OS trusted CAs' % (
         len(panos), total))
@@ -93,6 +93,7 @@ async def main_loop():
 
 def get_certs():
     invalid = {}
+    warning = {}
     roots = []
     intermediates = []
     parents = defaultdict(list)
@@ -142,13 +143,13 @@ def get_certs():
                     invalid[sha256] = x
                     continue
 
+                # https://www.ccadb.org/cas/fields#formula-fields
                 derived_trust_bits = row['Derived Trust Bits']
                 if (derived_trust_bits and 'Server Authentication' not in
                    derived_trust_bits.split(';')):
                     x = 'Missing Server Authentication (%s) %s' % (
                         derived_trust_bits, sha256)
-                    invalid[sha256] = x
-                    continue
+                    warning[sha256] = x
 
                 cert_type = row['Certificate Record Type']
 
@@ -188,7 +189,7 @@ def get_certs():
                                       x['Salesforce Record ID']),
                       file=sys.stderr)
 
-    return certs, invalid, roots, intermediates, parents
+    return certs, invalid, warning, roots, intermediates, parents
 
 
 def get_cert_chains(roots, intermediates, parents):
@@ -223,7 +224,7 @@ def follow(chain, k, parents):
             follow(chain, child, parents)
 
 
-async def get_panos_intermediates(certs, chains, invalid):
+async def get_panos_intermediates(certs, chains, invalid, warning):
     intermediates = {}
     not_in_common_store = {}
     total = 0
@@ -236,6 +237,12 @@ async def get_panos_intermediates(certs, chains, invalid):
                                         dialect='unix')
                 for row in reader:
                     sha256 = row['sha256']
+
+                    if sha256 in warning:
+                        print('PAN-OS certificate warning %s: %s' % (
+                            row['filename'],
+                            warning[sha256]), file=sys.stderr)
+
                     if sha256 in invalid:
                         print('Invalid PAN-OS certificate %s: %s' % (
                             row['filename'],
