@@ -438,7 +438,19 @@ guard.py Example
 import the intermediate certificates as trusted CA device certificates
 on PAN-OS.  The .panrc tagname can specify a Panorama, firewall or
 multi-vsys firewall.  ``--vsys`` is used to specify the vsys for
-multi-vsys firewalls.
+multi-vsys firewalls.  ``--delete`` is used to delete previously added
+certificates and when used with ``--add`` will perform an update of
+the existing intermediate certificates.
+
+The device intermediate certificate names are constructed in a way
+that they should be unique and not conflict with other certificate
+names:
+
++ The length is 31 characters (the maximum length on Panorama)
++ Starts with the 4 digit root certificate sequence number
++ Followed by a single dash '-'
++ Followed by the first 26 characters of the uppercase hexadecimal
+  certificate fingerprint
 
 .. note:: ``--add-roots`` is an experimental option which is known
 	  to cause a commit failure.
