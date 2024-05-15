@@ -33,10 +33,10 @@ Solution: Intermediate CA Preloading
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 ``pan-chainguard`` uses the PAN-OS default trusted CA store and the
-*All Certificate Information* CCADB data file as input, and determines
-the intermediate certificate chains, if available, for each root CA
-certificate.  These can then be added to PAN-OS as trusted CA device
-certificates.
+*All Certificate Information (root and intermediate) in CCADB (CSV)*
+data file as input, and determines the intermediate certificate
+chains, if available, for each root CA certificate.  These can then be
+added to PAN-OS as trusted CA device certificates.
 
 By preloading known intermediates for the trusted CAs, the number of
 TLS connection errors that users encounter for misconfigured servers
