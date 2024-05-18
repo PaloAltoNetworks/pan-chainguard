@@ -194,8 +194,8 @@ Role Based Admin
 
 As a best practice it is recommended to use an application specific
 role based admin for the XML API operations.  The following PAN-OS
-configuration creates a ``chainguard-api`` role and ``chainguard``
-admin::
+firewall configuration creates a ``chainguard-api`` admin role profile
+and ``chainguard`` admin::
 
    set shared admin-role chainguard-api role device xmlapi config enable
    set shared admin-role chainguard-api role device xmlapi op enable
@@ -210,6 +210,16 @@ admin::
 
 .. note:: Also ensure access to all *Web UI* (webui) and *REST API*
           (restapi) features are disabled.
+
+The admin role profile for Panorama::
+
+   set shared admin-role chainguard-api role panorama xmlapi config enable
+   set shared admin-role chainguard-api role panorama xmlapi op enable
+   set shared admin-role chainguard-api role panorama xmlapi commit enable
+   set shared admin-role chainguard-api role panorama xmlapi export enable
+   set shared admin-role chainguard-api role panorama xmlapi import enable
+   set shared admin-role chainguard-api role panorama webui
+   set shared admin-role chainguard-api role panorama restapi
 
 When using ``guard.py`` to commit the configuration, the ``--admin``
 option should be used to specify the ``pan-chainguard`` specific admin
