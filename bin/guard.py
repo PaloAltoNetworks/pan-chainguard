@@ -38,7 +38,108 @@ sys.path[:0] = [os.path.join(libpath, os.pardir)]
 from pan_chainguard import (title, __version__)
 
 args = None
-panorama = False
+
+
+class Xpath():
+    def __init__(self, *,
+                 panorama=False,
+                 template=None,
+                 vsys=None):
+        self.type = 'panorama' if panorama else 'firewall'
+        if self.type == 'firewall' and template is not None:
+            raise ValueError('template set for firewall')
+        self.template = template
+        self.vsys = vsys
+
+    def __str__(self):
+        x = self.__dict__
+        return ', '.join((': '.join((k, str(x[k]))))
+                         for k in sorted(x))
+
+    @property
+    def panorama(self):
+        return self.type == 'panorama'
+
+    def trusted_root_ca(self):
+        xpath = {
+            'firewall': {
+                'shared': '/config/shared/ssl-decrypt/trusted-root-CA',
+                'vsys': ("/config/devices/entry"
+                         "[@name='localhost.localdomain']"
+                         "/vsys/entry[@name='%s']/ssl-decrypt"
+                         "/trusted-root-CA")
+            },
+
+            'panorama': {
+                'shared': '/config/panorama/ssl-decrypt/trusted-root-CA',
+                'template': {
+                    'shared': ("/config/devices/entry"
+                               "[@name='localhost.localdomain']"
+                               "/template/entry[@name='%s']/config/shared"
+                               "/ssl-decrypt/trusted-root-CA"),
+                    'vsys': ("/config/devices/entry"
+                             "[@name='localhost.localdomain']"
+                             "/template/entry[@name='%s']/config/devices"
+                             "/entry[@name='localhost.localdomain']/vsys"
+                             "/entry[@name='%s']/ssl-decrypt/trusted-root-CA")
+                },
+            },
+        }
+
+        if self.type == 'firewall':
+            if self.vsys is None:
+                x = xpath[self.type]['shared']
+            else:
+                x = xpath[self.type]['vsys'] % self.vsys
+        else:
+            if self.template is None:
+                x = xpath[self.type]['shared']
+            elif self.vsys is None:
+                x = xpath[self.type]['template']['shared'] % self.template
+            else:
+                x = xpath[self.type]['template']['vsys'] % (
+                    self.template, self.vsys)
+
+        return x
+
+    def certificates(self):
+        xpath = {
+            'firewall': {
+                'shared': '/config/shared/certificate',
+                'vsys': ("/config/devices/entry[@name='localhost.localdomain']"
+                         "/vsys/entry[@name='%s']/certificate"),
+            },
+
+            'panorama': {
+                'panorama': '/config/panorama/certificate',
+                'template': {
+                    'shared': ("/config/devices/entry"
+                               "[@name='localhost.localdomain']"
+                               "/template/entry[@name='%s']"
+                               "/config/shared/certificate"),
+                    'vsys': ("/config/devices/entry"
+                             "[@name='localhost.localdomain']"
+                             "/template/entry[@name='%s']/config/devices"
+                             "/entry[@name='localhost.localdomain']"
+                             "/vsys/entry[@name='%s']/certificate")
+                },
+            },
+        }
+
+        if self.type == 'firewall':
+            if self.vsys is None:
+                x = xpath[self.type]['shared']
+            else:
+                x = xpath[self.type]['vsys'] % self.vsys
+        else:
+            if self.template is None:
+                x = xpath[self.type]['panorama']
+            elif self.vsys is None:
+                x = xpath[self.type]['template']['shared'] % self.template
+            else:
+                x = xpath[self.type]['template']['vsys'] % self.vsys
+
+        return x
 
 
 def main():
@@ -66,6 +167,7 @@ def main():
 
 async def main_loop():
     xapi = None
+    panorama = False
 
     if args.tag:
         try:
@@ -76,7 +178,6 @@ async def main_loop():
             elem = xapi.element_root.find('./result/model')
             if elem is not None:
                 if elem.text == 'Panorama':
-                    global panorama
                     panorama = True
             else:
                 print("Can't get model", file=sys.stderr)
@@ -84,13 +185,21 @@ async def main_loop():
             print('pan.xapi.PanXapi:', e, file=sys.stderr)
             sys.exit(1)
 
+    xpath = Xpath(panorama=panorama,
+                  vsys=args.vsys,
+                  template=args.template)
+    if args.debug > 1:
+        print('Xpath():', str(xpath), file=sys.stderr)
+        print(xpath.certificates())
+        print(xpath.trusted_root_ca())
+
     if (args.delete or args.add or args.add_roots or
        args.commit) and xapi is None:
         print('--tag argument required', file=sys.stderr)
         sys.exit(1)
 
     if args.delete:
-        delete_certs(xapi)
+        delete_certs(xapi, xpath)
 
     if args.add or args.add_roots:
         total = {
@@ -106,7 +215,7 @@ async def main_loop():
                     cert_name, cert_type = parse_cert(member.name)
                     f = tar.extractfile(member)
                     content = f.read()
-                    if add_cert(xapi, cert_name, cert_type, content):
+                    if add_cert(xapi, xpath, cert_name, cert_type, content):
                         total[cert_type] += 1
         except (tarfile.TarError, OSError) as e:
             print("tarfile %s: %s" % (args.certs, e), file=sys.stderr)
@@ -138,43 +247,26 @@ def parse_cert(path):
     return cert_name[:31], cert_type
 
 
-def delete_certs(xapi):
-    if args.vsys:
-        xpath_panos = ("/config/devices/entry[@name='localhost.localdomain']"
-                       "/vsys/entry[@name='%s']/certificate") % args.vsys
-        xpath2_panos = ("/config/devices/entry[@name='localhost.localdomain']"
-                        "/vsys/entry[@name='%s']/ssl-decrypt/trusted-root-CA"
-                        "/member[text()='%s']")
-    else:
-        xpath_panos = '/config/shared/certificate'
-        xpath2_panos = ("/config/shared/ssl-decrypt/trusted-root-CA"
-                        "/member[text()='%s']")
-    xpath_panorama = '/config/panorama/certificate'
-    xpath2_panorama = ("/config/panorama/ssl-decrypt/trusted-root-CA"
-                       "/member[text()='%s']")
-
+def delete_certs(xapi, xpath):
     pat = r'^\d{4,4}-[0-9A-F]{26,26}$'
 
-    xpath = xpath_panorama if panorama else xpath_panos
-    kwargs = {'xpath': xpath}
+    certificates = xpath.certificates()
+    kwargs = {'xpath': certificates}
     api_request(xapi, xapi.get, kwargs, 'success', '19')
 
     total = 0
+    rootca = xpath.trusted_root_ca()
     entries = xapi.element_root.findall('./result/certificate/entry')
+
     for entry in entries:
         name = entry.attrib['name']
         if re.search(pat, name):
-            if panorama:
-                xpath2 = xpath2_panorama % name
-            elif args.vsys:
-                xpath2 = xpath2_panos % (args.vsys, name)
-            else:
-                xpath2 = xpath2_panos % name
-            kwargs = {'xpath': xpath2}
+            member = "/member[text()='%s']" % name
+            kwargs = {'xpath': rootca + member}
             api_request(xapi, xapi.delete, kwargs, 'success', ['7', '20'])
 
-            xpath2 = xpath + "/entry[@name='%s']" % name
-            kwargs = {'xpath': xpath2}
+            entry = "/entry[@name='%s']" % name
+            kwargs = {'xpath': certificates + entry}
             api_request(xapi, xapi.delete, kwargs, 'success', '20')
 
             total += 1
@@ -184,7 +276,7 @@ def delete_certs(xapi):
     print('%d certificates deleted' % total)
 
 
-def add_cert(xapi, cert_name, cert_type, content):
+def add_cert(xapi, xpath, cert_name, cert_type, content):
     if (cert_type == 'root' and not args.add_roots or
        cert_type == 'intermediate' and not args.add):
         return False
@@ -197,24 +289,24 @@ def add_cert(xapi, cert_name, cert_type, content):
             'format': 'pem',
         },
     }
-    if args.vsys is not None:
+
+    if xpath.panorama:
+        if args.template is not None:
+            kwargs['extra_qs']['target-tpl'] = args.template
+        if args.vsys is not None:
+            # XXX does not work
+            kwargs['extra_qs']['target-tpl-vsys'] = args.vsys
+    elif args.vsys is not None:
         kwargs['vsys'] = args.vsys
 
     api_request(xapi, xapi.import_file, kwargs, 'success')
 
-    if args.vsys:
-        xpath = ("/config/devices/entry[@name='localhost.localdomain']"
-                 "/vsys/entry[@name='%s']/ssl-decrypt"
-                 "/trusted-root-CA") % args.vsys
-    elif panorama:
-        xpath = '/config/panorama/ssl-decrypt/trusted-root-CA'
-    else:
-        xpath = '/config/shared/ssl-decrypt/trusted-root-CA'
+    trustedca = xpath.trusted_root_ca()
 
     element = '<member>%s</member>' % cert_name
 
     kwargs = {
-        'xpath': xpath,
+        'xpath': trustedca,
         'element': element,
     }
 
@@ -329,6 +421,8 @@ def parse_args():
     parser.add_argument('--vsys',
                         type=check_vsys,
                         help='vsys name or number')
+    parser.add_argument('--template',
+                        help='Panorama template')
     x = 'certificates.tgz'
     parser.add_argument('--certs',
                         default=x,

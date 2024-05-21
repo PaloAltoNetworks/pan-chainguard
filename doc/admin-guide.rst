@@ -427,19 +427,20 @@ guard.py Usage
    preload PAN-OS intermediate CAs
 
    options:
-     -h, --help          show this help message and exit
-     --tag TAG, -t TAG   .panrc tagname
-     --vsys VSYS         vsys name or number
-     --certs PATH        PAN-OS certificate archive path (default: certificates.tgz)
-     --add               add intermediate certificates
-     --add-roots         add root certificates (experimental)
-     --delete            delete previously added certificates
-     --commit            commit configuration
-     --admin ADMIN       commit admin
-     --xdebug {0,1,2,3}  pan.xapi debug
-     --verbose           enable verbosity
-     --debug {0,1,2,3}   enable debug
-     --version           display version
+     -h, --help           show this help message and exit
+     --tag TAG, -t TAG    .panrc tagname
+     --vsys VSYS          vsys name or number
+     --template TEMPLATE  Panorama template
+     --certs PATH         PAN-OS certificate archive path (default: certificates.tgz)
+     --add                add intermediate certificates
+     --add-roots          add root certificates (experimental)
+     --delete             delete previously added certificates
+     --commit             commit configuration
+     --admin ADMIN        commit admin
+     --xdebug {0,1,2,3}   pan.xapi debug
+     --verbose            enable verbosity
+     --debug {0,1,2,3}    enable debug
+     --version            display version
 
 guard.py Example
 ................
@@ -448,7 +449,8 @@ guard.py Example
 import the intermediate certificates as trusted CA device certificates
 on PAN-OS.  The .panrc tagname can specify a Panorama, firewall or
 multi-vsys firewall.  ``--vsys`` is used to specify the vsys for
-multi-vsys firewalls.  ``--delete`` is used to delete previously added
+multi-vsys firewalls.  ``--template`` is used to specify the Panorama
+template to update.  ``--delete`` is used to delete previously added
 certificates and when used with ``--add`` will perform an update of
 the existing intermediate certificates.
 
@@ -465,11 +467,11 @@ names:
 .. note:: ``--add-roots`` is an experimental option which is known
 	  to cause a commit failure.
 
-.. note:: Panorama support is limited and currently the Panorama
-	  device certificates are updated as a first step; support for
-	  templates and vsys can be added in the future.  Also commit
-	  implements commit to Panorama; it is unlikely commit and
-	  push will be added.
+.. note:: Panorama support includes:
+
+	  + import to Panorama device certificates
+	  + import to Template shared device certificates
+	  + commit to Panorama
 
 ::
 
