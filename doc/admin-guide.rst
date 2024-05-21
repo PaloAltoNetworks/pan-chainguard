@@ -198,7 +198,6 @@ firewall configuration creates a ``chainguard-api`` admin role profile
 and ``chainguard`` admin::
 
    set shared admin-role chainguard-api role device xmlapi config enable
-   set shared admin-role chainguard-api role device xmlapi op enable
    set shared admin-role chainguard-api role device xmlapi commit enable
    set shared admin-role chainguard-api role device xmlapi export enable
    set shared admin-role chainguard-api role device xmlapi import enable
@@ -214,7 +213,6 @@ and ``chainguard`` admin::
 The admin role profile for Panorama::
 
    set shared admin-role chainguard-api role panorama xmlapi config enable
-   set shared admin-role chainguard-api role panorama xmlapi op enable
    set shared admin-role chainguard-api role panorama xmlapi commit enable
    set shared admin-role chainguard-api role panorama xmlapi export enable
    set shared admin-role chainguard-api role panorama xmlapi import enable
