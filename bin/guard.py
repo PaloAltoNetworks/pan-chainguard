@@ -190,8 +190,8 @@ async def main_loop():
                   template=args.template)
     if args.debug > 1:
         print('Xpath():', str(xpath), file=sys.stderr)
-        print(xpath.certificates())
-        print(xpath.trusted_root_ca())
+        print(xpath.certificates(), file=sys.stderr)
+        print(xpath.trusted_root_ca(), file=sys.stderr)
 
     if (args.delete or args.add or args.add_roots or
        args.commit) and xapi is None:
