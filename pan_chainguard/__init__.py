@@ -14,5 +14,5 @@
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 #
 
-__version__ = '0.1.0'
+__version__ = '0.2.0'
 title = 'pan-chainguard'

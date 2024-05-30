@@ -1,6 +1,29 @@
 Release History
 ===============
 
+0.2.0 (2024-05-30)
+------------------
+
+- guard.py: Add support for import to Panorama Template shared device
+  certificates.
+
+- chain.py:
+
+  Change 'Server Authentication' not in 'Derived Trust Bits' check to
+  a warning.  Safer to leave these valid until we can research this
+  more.
+
+- Documentation improvements and fixes:
+
+  + type=op not needed in admin role profile.
+
+  + Add admin role profile for Panorama.
+
+  + Document intermediate certificate name pattern.
+
+  + There is a single *All Certificate Information (root and
+    intermediate) in CCADB (CSV)* data file now.
+
 0.1.0 (2024-04-09)
 ------------------
 
