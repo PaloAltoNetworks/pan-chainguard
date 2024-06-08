@@ -226,7 +226,7 @@ async def main_loop():
                 print('%d %s certificates added' % (total[x], x))
 
     if args.commit:
-        commit(xapi)
+        commit(xapi, panorama)
 
 
 def parse_cert(path):
@@ -342,7 +342,7 @@ def api_request(xapi, func, kwargs, status=None, status_code=None):
         sys.exit(1)
 
 
-def commit(xapi):
+def commit(xapi, panorama):
     root = etree.Element('commit')
     desc = etree.SubElement(root, 'description')
     desc.text = '%s %s' % (title, __version__)
