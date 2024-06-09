@@ -198,6 +198,7 @@ firewall configuration creates a ``chainguard-api`` admin role profile
 and ``chainguard`` admin::
 
    set shared admin-role chainguard-api role device xmlapi config enable
+   set shared admin-role chainguard-api role device xmlapi op enable
    set shared admin-role chainguard-api role device xmlapi commit enable
    set shared admin-role chainguard-api role device xmlapi export enable
    set shared admin-role chainguard-api role device xmlapi import enable
@@ -210,9 +211,14 @@ and ``chainguard`` admin::
 .. note:: Also ensure access to all *Web UI* (webui) and *REST API*
           (restapi) features are disabled.
 
+.. note:: Operational requests are needed because a synchronous commit
+	  is used which requires ``show jobs id id-num`` to poll for
+	  job completion.
+
 The admin role profile for Panorama::
 
    set shared admin-role chainguard-api role panorama xmlapi config enable
+   set shared admin-role chainguard-api role panorama xmlapi op enable
    set shared admin-role chainguard-api role panorama xmlapi commit enable
    set shared admin-role chainguard-api role panorama xmlapi export enable
    set shared admin-role chainguard-api role panorama xmlapi import enable
