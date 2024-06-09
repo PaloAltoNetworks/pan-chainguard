@@ -60,6 +60,25 @@ class Xpath():
     def panorama(self):
         return self.type == 'panorama'
 
+    def _variant(self, xpath):
+        if self.type == 'firewall':
+            if self.vsys is None:
+                x = xpath[self.type]['shared']
+            else:
+                x = xpath[self.type]['vsys'] % self.vsys
+        elif self.type == 'panorama':
+            if self.template is None:
+                x = xpath[self.type]['panorama']
+            elif self.vsys is None:
+                x = xpath[self.type]['template']['shared'] % self.template
+            else:
+                x = xpath[self.type]['template']['vsys'] % (
+                    self.template, self.vsys)
+        else:
+            assert False, 'Malformed type: %s' % self.type
+
+        return x
+
     def trusted_root_ca(self):
         xpath = {
             'firewall': {
@@ -71,7 +90,7 @@ class Xpath():
             },
 
             'panorama': {
-                'shared': '/config/panorama/ssl-decrypt/trusted-root-CA',
+                'panorama': '/config/panorama/ssl-decrypt/trusted-root-CA',
                 'template': {
                     'shared': ("/config/devices/entry"
                                "[@name='localhost.localdomain']"
@@ -86,21 +105,7 @@ class Xpath():
             },
         }
 
-        if self.type == 'firewall':
-            if self.vsys is None:
-                x = xpath[self.type]['shared']
-            else:
-                x = xpath[self.type]['vsys'] % self.vsys
-        else:
-            if self.template is None:
-                x = xpath[self.type]['shared']
-            elif self.vsys is None:
-                x = xpath[self.type]['template']['shared'] % self.template
-            else:
-                x = xpath[self.type]['template']['vsys'] % (
-                    self.template, self.vsys)
-
-        return x
+        return self._variant(xpath)
 
     def certificates(self):
         xpath = {
@@ -126,20 +131,7 @@ class Xpath():
             },
         }
 
-        if self.type == 'firewall':
-            if self.vsys is None:
-                x = xpath[self.type]['shared']
-            else:
-                x = xpath[self.type]['vsys'] % self.vsys
-        else:
-            if self.template is None:
-                x = xpath[self.type]['panorama']
-            elif self.vsys is None:
-                x = xpath[self.type]['template']['shared'] % self.template
-            else:
-                x = xpath[self.type]['template']['vsys'] % self.vsys
-
-        return x
+        return self._variant(xpath)
 
 
 def main():
