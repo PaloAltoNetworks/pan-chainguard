@@ -213,6 +213,8 @@ async def main_loop():
             print("tarfile %s: %s" % (args.certs, e), file=sys.stderr)
             sys.exit(1)
 
+        add_trusted_root_cas(xapi, xpath, add_cert.cert_names)
+
         for x in total:
             if total[x] > 0:
                 print('%d %s certificates added' % (total[x], x))
@@ -293,9 +295,27 @@ def add_cert(xapi, xpath, cert_name, cert_type, content):
 
     api_request(xapi, xapi.import_file, kwargs, 'success')
 
-    trustedca = xpath.trusted_root_ca()
+    # Use function attribute to cache certificate names so we can use
+    # a single API request to enable them as trusted root CAs.
+    try:
+        add_cert.cert_names.append(cert_name)
+    except AttributeError:
+        add_cert.cert_names = [cert_name]
 
-    element = '<member>%s</member>' % cert_name
+    if args.verbose:
+        print('added %s %s' % (cert_type, cert_name), file=sys.stderr)
+
+    return True
+
+
+def add_trusted_root_cas(xapi, xpath, cert_names):
+    members = []
+
+    for x in cert_names:
+        members.append('<member>%s</member>' % x)
+
+    trustedca = xpath.trusted_root_ca()
+    element = ''.join(members)
 
     kwargs = {
         'xpath': trustedca,
@@ -303,11 +323,6 @@ def add_cert(xapi, xpath, cert_name, cert_type, content):
     }
 
     api_request(xapi, xapi.set, kwargs, 'success', '20')
-
-    if args.verbose:
-        print('added %s %s' % (cert_type, cert_name), file=sys.stderr)
-
-    return True
 
 
 def api_request(xapi, func, kwargs, status=None, status_code=None):
