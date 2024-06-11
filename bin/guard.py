@@ -351,20 +351,29 @@ def commit(xapi, panorama):
     shared_object = etree.Element('shared-object')
     shared_object.text = 'excluded'
 
-    if args.vsys:
-        # commit scope: vsys
-        vsys = etree.SubElement(partial, 'vsys')
-        vsys_member = etree.SubElement(vsys, 'member')
-        vsys_member.text = args.vsys
-        partial.append(device_and_network)
-        partial.append(shared_object)
-    elif panorama:
-        # commit scope: device-and-network
-        partial.append(shared_object)
+    if panorama:
+        if args.template:
+            # commit scope: template
+            # no template vsys scope
+            template = etree.SubElement(partial, 'template')
+            template_member = etree.SubElement(template, 'member')
+            template_member.text = args.template
+        else:
+            # commit scope: device-and-network
+            partial.append(shared_object)
     else:
-        # commit scope: shared-object
-        partial.append(device_and_network)
-        partial.append(policy_and_objects)
+        # firewall
+        if args.vsys:
+            # commit scope: vsys
+            vsys = etree.SubElement(partial, 'vsys')
+            vsys_member = etree.SubElement(vsys, 'member')
+            vsys_member.text = args.vsys
+            partial.append(device_and_network)
+            partial.append(shared_object)
+        else:
+            # commit scope: shared-object
+            partial.append(device_and_network)
+            partial.append(policy_and_objects)
 
     cmd = etree.tostring(root).decode()
     if args.debug:
