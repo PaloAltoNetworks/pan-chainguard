@@ -336,13 +336,13 @@ def api_request(xapi, func, kwargs, status=None, status_code=None):
 
 def commit(xapi, panorama):
     root = etree.Element('commit')
-    desc = etree.SubElement(root, 'description')
+    partial = etree.SubElement(root, 'partial')
+    desc = etree.SubElement(partial, 'description')
     desc.text = '%s %s' % (title, __version__)
     if args.admin:
-        admin = etree.SubElement(root, 'admin')
+        admin = etree.SubElement(partial, 'admin')
         admin_member = etree.SubElement(admin, 'member')
         admin_member.text = args.admin
-    partial = etree.SubElement(root, 'partial')
 
     policy_and_objects = etree.Element('policy-and-objects')
     policy_and_objects.text = 'excluded'
@@ -352,14 +352,17 @@ def commit(xapi, panorama):
     shared_object.text = 'excluded'
 
     if args.vsys:
+        # commit scope: vsys
         vsys = etree.SubElement(partial, 'vsys')
         vsys_member = etree.SubElement(vsys, 'member')
         vsys_member.text = args.vsys
         partial.append(device_and_network)
         partial.append(shared_object)
     elif panorama:
+        # commit scope: device-and-network
         partial.append(shared_object)
     else:
+        # commit scope: shared-object
         partial.append(device_and_network)
         partial.append(policy_and_objects)
 
