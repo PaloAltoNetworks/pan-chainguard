@@ -293,6 +293,7 @@ async def download(api, sequence, sha256):
     RETRY_STATUS = [
         429,  # Too Many Requests
         502,  # Bad Gateway
+        503,  # Service Unavailable
         504,  # Gateway Time-out
     ]
 
