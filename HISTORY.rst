@@ -1,6 +1,30 @@
 Release History
 ===============
 
+0.3.0 (2024-06-12)
+------------------
+
+- guard.py: Cache certificate names so we can use a single API request
+  to enable them as trusted root CAs.
+
+- guard.py: When device is panorama and template specified, perform
+  partial commit with template scope.
+
+- chain.py: Also retry download on 503 Service Unavailable.
+
+- guard.py: Fix partial commit using specific admin.  In the XML cmd
+  document, <admin> needs to be within <partial> container.
+
+- guard.py: Simplify Xpath() class.
+
+- admin-guide.rst:
+
+  chainguard-api admin profile does require type=op because we use
+  synchronous commit in pan.xapi which uses 'show jobs id id-num' to
+  check job status.
+
+- guard.py: Fix use of panorama from removal of global.
+
 0.2.0 (2024-05-30)
 ------------------
 
