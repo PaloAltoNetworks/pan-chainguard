@@ -505,8 +505,8 @@ PAN-OS 11.x CA Store
 ~~~~~~~~~~~~~~~~~~~~
 
 The certificate store was updated for PAN-OS 11.0, which was released
-in November 2022.  All 11.x.x releases contain the same store (11.0.x
-and 11.1.x).
+in November 2022.  All 11.x.x releases contain the same store (11.0.x,
+11.1.x and 11.2.x).
 
 About the Name
 --------------
