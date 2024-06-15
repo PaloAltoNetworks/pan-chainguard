@@ -21,7 +21,6 @@ import argparse
 import asyncio
 from collections import defaultdict
 import csv
-import datetime
 import io
 import os
 import pprint
@@ -32,8 +31,9 @@ import time
 libpath = os.path.dirname(os.path.abspath(__file__))
 sys.path[:0] = [os.path.join(libpath, os.pardir)]
 
-from pan_chainguard import (title, __version__)
-from pan_chainguard.crtsh import (ArgsError, CrtShApi)
+from pan_chainguard import title, __version__
+from pan_chainguard.ccadb import revoked, valid_from_to
+from pan_chainguard.crtsh import ArgsError, CrtShApi
 
 ROOT = 'root'
 INTERMEDIATE = 'intermediate'
@@ -100,44 +100,25 @@ def get_certs():
     certs = {}
     duplicates = defaultdict(list)
 
-    now = datetime.datetime.now(datetime.timezone.utc)
-
     try:
         with open(args.ccadb, 'r', newline='') as csvfile:
             reader = csv.DictReader(csvfile,
                                     dialect='unix')
             for row in reader:
                 sha256 = row['SHA-256 Fingerprint']
+                name = row['Certificate Name']
 
-                if row['Revocation Status'] not in ['', 'Not Revoked']:
-                    x = '%s %s %s' % (row['Revocation Status'],
-                                      sha256,
-                                      row['Certificate Name'])
+                ret, err = revoked(row)
+                if ret:
+                    x = '%s %s %s' % (err, sha256, name)
                     if args.debug > 1:
                         print(x, file=sys.stderr)
                     invalid[sha256] = x
                     continue
 
-                fmt = '%Y.%m.%d %z'
-                valid_from = datetime.datetime.strptime(
-                    row['Valid From (GMT)'] + ' +0000', fmt)
-                valid_to = datetime.datetime.strptime(
-                    row['Valid To (GMT)'] + ' +0000', fmt)
-                if now < valid_from:
-                    x = 'Not yet valid (valid from %s) %s %s' % (
-                        row['Valid From (GMT)'],
-                        sha256,
-                        row['Certificate Name'])
-                    if args.debug > 1:
-                        print(x, file=sys.stderr)
-                    invalid[sha256] = x
-                    continue
-
-                if valid_to < now:
-                    x = 'Expired (valid to %s) %s %s' % (
-                        row['Valid To (GMT)'],
-                        sha256,
-                        row['Certificate Name'])
+                ret, err = valid_from_to(row)
+                if not ret:
+                    x = '%s %s %s' % (err, sha256, name)
                     if args.debug > 1:
                         print(x, file=sys.stderr)
                     invalid[sha256] = x
