@@ -13,7 +13,7 @@ graph TD
     untar(untar)
     fingerprints(cert-fingerprints.sh)
     fingerprintscsv[(cert-fingerprints.csv)]
-    ccadb[("CCADB</br>All Certificate Information")]
+    ccadb[("AllCertificateRecordsReport.csv</br>CCADB All Certificate Information")]
     certificates[(certificates.tgz)]
 
     panos<-->|XML API|fling
