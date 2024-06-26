@@ -343,8 +343,11 @@ async def download(api, sequence, sha256):
 
 
 async def get_cert_files(panos):
+    user_agent = '%s/%s' % (title, __version__)
+    headers = {'user-agent': user_agent}
+
     try:
-        api = CrtShApi(timeout=CRT_SH_TIMEOUT)
+        api = CrtShApi(timeout=CRT_SH_TIMEOUT, headers=headers)
     except ArgsError as e:
         print('CrtShApi: %s' % e, file=sys.stderr)
         sys.exit(1)
