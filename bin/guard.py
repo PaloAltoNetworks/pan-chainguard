@@ -434,7 +434,7 @@ def parse_args():
 
     parser = argparse.ArgumentParser(
         usage='%(prog)s [options]',
-        description='preload PAN-OS intermediate CAs')
+        description='preload intermediate CAs')
     parser.add_argument('--tag', '-t',
                         help='.panrc tagname')
     parser.add_argument('--vsys',
@@ -446,7 +446,7 @@ def parse_args():
     parser.add_argument('--certs',
                         default=x,
                         metavar='PATH',
-                        help='PAN-OS certificate archive path'
+                        help='certificate archive path'
                         ' (default: %s)' % x)
     parser.add_argument('--add',
                         action='store_true',

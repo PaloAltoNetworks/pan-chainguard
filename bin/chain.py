@@ -68,11 +68,11 @@ async def main_loop():
 
     total, total_invalid, panos = await get_panos_intermediates(
         certs, chains, invalid, warning)
-    print('%d invalid PAN-OS certificates found' % total_invalid)
-    print('%d intermediate chains found for %d PAN-OS trusted CAs' % (
+    print('%d invalid certificates found' % total_invalid)
+    print('%d intermediate chains found for %d root CAs' % (
         len(panos), total))
     if args.debug > 1:
-        print('PAN-OS intermediate chains', pprint.pformat(panos),
+        print('intermediate chains', pprint.pformat(panos),
               file=sys.stderr)
 
     errors, certificates = await get_cert_files(panos)
@@ -83,7 +83,7 @@ async def main_loop():
               % len(certificates))
 
     if args.debug > 2:
-        print('PAN-OS certificates', pprint.pformat(certificates),
+        print('certificates', pprint.pformat(certificates),
               file=sys.stderr)
 
     create_archive(certificates)
@@ -220,19 +220,19 @@ async def get_panos_intermediates(certs, chains, invalid, warning):
                     sha256 = row['sha256']
 
                     if sha256 in warning:
-                        print('PAN-OS certificate warning %s: %s' % (
+                        print('Certificate warning %s: %s' % (
                             row['filename'],
                             warning[sha256]), file=sys.stderr)
 
                     if sha256 in invalid:
-                        print('Invalid PAN-OS certificate %s: %s' % (
+                        print('Invalid certificate %s: %s' % (
                             row['filename'],
                             invalid[sha256]), file=sys.stderr)
                         total_invalid += 1
                         continue
 
                     if sha256 not in certs:
-                        print('Invalid PAN-OS certificate %s: %s' % (
+                        print('Invalid certificate %s: %s' % (
                             row['filename'],
                             'Not found in CCADB'), file=sys.stderr)
                         total_invalid += 1
@@ -243,7 +243,7 @@ async def get_panos_intermediates(certs, chains, invalid, warning):
                         included = [': Included' in x for x in statuses]
                         if not any(included):
                             not_in_common_store[sha256] = status_root
-                            print('PAN-OS certificate not in common root store'
+                            print('Certificate not in common root store'
                                   ' %s: %s' % (row['filename'], status_root),
                                   file=sys.stderr)
 
@@ -455,7 +455,7 @@ def create_archive(certificates=None, test=False):
 def parse_args():
     parser = argparse.ArgumentParser(
         usage='%(prog)s [options]',
-        description='generate PAN-OS intermediate CAs to preload')
+        description='generate intermediate CAs to preload')
     # curl -OJ \
     # https://ccadb.my.salesforce-sites.com/ccadb/AllCertificateRecordsCSVFormatv2
     parser.add_argument('-c', '--ccadb',
@@ -465,7 +465,7 @@ def parse_args():
     # sh cert-fingerprints.sh cert-dir
     parser.add_argument('-f', '--fingerprints',
                         metavar='PATH',
-                        help='PAN-OS trusted CAs fingerprints CSV path')
+                        help='root CAs fingerprints CSV path')
     x = 'certificates.tgz'
     parser.add_argument('--certs',
                         default=x,
