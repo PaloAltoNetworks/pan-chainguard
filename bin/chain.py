@@ -32,7 +32,7 @@ libpath = os.path.dirname(os.path.abspath(__file__))
 sys.path[:0] = [os.path.join(libpath, os.pardir)]
 
 from pan_chainguard import title, __version__
-from pan_chainguard.ccadb import revoked, valid_from_to
+from pan_chainguard.ccadb import *
 from pan_chainguard.crtsh import ArgsError, CrtShApi
 
 ROOT = 'root'
@@ -124,12 +124,12 @@ def get_certs():
                     invalid[sha256] = x
                     continue
 
-                # https://www.ccadb.org/cas/fields#formula-fields
-                derived_trust_bits = row['Derived Trust Bits']
-                if (derived_trust_bits and 'Server Authentication' not in
-                   derived_trust_bits.split(';')):
-                    x = 'Missing Server Authentication (%s) %s' % (
-                        derived_trust_bits, sha256)
+                trust_bits = derived_trust_bits(row)
+                if (trust_bits != TrustBits.NONE and
+                   TrustBits.SERVER_AUTHENTICATION not in trust_bits):
+                    x = 'Missing %s in %s %s' % (
+                        TrustBits.SERVER_AUTHENTICATION.name,
+                        trust_bits, sha256)
                     warning[sha256] = x
 
                 cert_type = row['Certificate Record Type']
