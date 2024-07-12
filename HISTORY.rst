@@ -1,6 +1,21 @@
 Release History
 ===============
 
+0.4.0 (2024-07-12)
+------------------
+
+- ccadb.py: Add functions for 'Derived Trust Bits' to ccadb module.
+
+- chain.py: Set user-agent header to pan-chainguard/version for crt.sh
+  API.
+
+- chain.py, guard.py: Generalise some message strings previously
+  specifying PAN-OS to prepare for using other root stores as input.
+
+- chain.py, ccadb.py: Add pan_chainguard.ccadb module.
+
+- Documentation improvements and fixes.
+
 0.3.0 (2024-06-12)
 ------------------
 
