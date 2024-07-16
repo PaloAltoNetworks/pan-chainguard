@@ -133,6 +133,36 @@ class Xpath():
 
         return self._variant(xpath)
 
+    def root_ca_exclude_list(self):
+        xpath = {
+            'firewall': {
+                'shared': '/config/shared/ssl-decrypt/root-ca-exclude-list',
+                'vsys': ("/config/devices/entry[@name='localhost.localdomain']"
+                         "/vsys/entry[@name='%s']/ssl-decrypt/"
+                         "root-ca-exclude-list"),
+            },
+
+            'panorama': {
+                'panorama': ('/config/panorama/ssl-decrypt/'
+                             'root-ca-exclude-list'),
+                'template': {
+                    'shared': ("/config/devices/entry"
+                               "[@name='localhost.localdomain']"
+                               "/template/entry[@name='%s']"
+                               "/config/shared/ssl-decrypt/"
+                               "root-ca-exclude-list"),
+                    'vsys': ("/config/devices/entry"
+                             "[@name='localhost.localdomain']"
+                             "/template/entry[@name='%s']/config/devices"
+                             "/entry[@name='localhost.localdomain']"
+                             "/vsys/entry[@name='%s']/ssl-decrypt/"
+                             "root-ca-exclude-list")
+                },
+            },
+        }
+
+        return self._variant(xpath)
+
 
 def main():
     global args
@@ -184,11 +214,19 @@ async def main_loop():
         print('Xpath():', str(xpath), file=sys.stderr)
         print(xpath.certificates(), file=sys.stderr)
         print(xpath.trusted_root_ca(), file=sys.stderr)
+        print(xpath.root_ca_exclude_list(), file=sys.stderr)
 
-    if (args.delete or args.add or args.add_roots or
-       args.commit) and xapi is None:
+    if (any([args.disable_trusted, args.enable_trusted,
+             args.delete, args.add, args.add_roots, args.commit]) and
+       xapi is None):
         print('--tag argument required', file=sys.stderr)
         sys.exit(1)
+
+    if args.enable_trusted:
+        enable_trusted(xapi, xpath)
+
+    if args.disable_trusted:
+        disable_trusted(xapi, xpath)
 
     if args.delete:
         delete_certs(xapi, xpath)
@@ -221,6 +259,44 @@ async def main_loop():
 
     if args.commit:
         commit(xapi, panorama)
+
+
+def enable_trusted(xapi, xpath):
+    kwargs = {'xpath': xpath.root_ca_exclude_list()}
+    api_request(xapi, xapi.get, kwargs, 'success', ['7', '19'])
+    entries = xapi.element_root.findall('./result/root-ca-exclude-list/member')
+    if len(entries) > 0:
+        api_request(xapi, xapi.delete, kwargs, 'success', ['7', '20'])
+    print('%d default trusted root CAs enabled' % len(entries))
+
+
+def disable_trusted(xapi, xpath):
+    kwargs = {'xpath': '/config/predefined/trusted-root-ca'}
+    api_request(xapi, xapi.get, kwargs, 'success', '19')
+
+    total = 0
+    entries = xapi.element_root.findall('./result/trusted-root-ca/entry')
+
+    members = []
+    for entry in entries:
+        name = entry.attrib['name']
+        member = '<member>%s</member>' % name
+        members.append(member)
+
+        total += 1
+        if args.verbose:
+            print('disabling', name, file=sys.stderr)
+
+    root_ca_exclude = xpath.root_ca_exclude_list()
+    element = ''.join(members)
+
+    kwargs = {
+        'xpath': root_ca_exclude,
+        'element': element,
+    }
+    api_request(xapi, xapi.set, kwargs, 'success', '20')
+
+    print('%d default trusted root CAs disabled' % total)
 
 
 def parse_cert(path):
@@ -453,10 +529,16 @@ def parse_args():
                         help='add intermediate certificates')
     parser.add_argument('--add-roots',
                         action='store_true',
-                        help='add root certificates (experimental)')
+                        help='add root certificates')
     parser.add_argument('--delete',
                         action='store_true',
                         help='delete previously added certificates')
+    parser.add_argument('--disable-trusted',
+                        action='store_true',
+                        help='disable all default trusted root CAs')
+    parser.add_argument('--enable-trusted',
+                        action='store_true',
+                        help='enable all default trusted root CAs')
     parser.add_argument('--commit',
                         action='store_true',
                         help='commit configuration')

@@ -32,7 +32,7 @@ certificates are imported into PAN-OS.
 Solution: Intermediate CA Preloading
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-``pan-chainguard`` uses the PAN-OS default trusted CA store and the
+``pan-chainguard`` uses a root store and the
 *All Certificate Information (root and intermediate) in CCADB (CSV)*
 data file as input, and determines the intermediate certificate
 chains, if available, for each root CA certificate.  These can then be
