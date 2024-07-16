@@ -175,7 +175,7 @@ def parse_args():
     parser.add_argument('--tag', '-t',
                         required=True,
                         help='.panrc tagname')
-    x = 'trust-store.tgz'
+    x = 'root-store.tgz'
     parser.add_argument('--certs',
                         default=x,
                         metavar='PATH',

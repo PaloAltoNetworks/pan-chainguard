@@ -477,7 +477,7 @@ def parse_args():
                         ' (default: %s)' % x)
     parser.add_argument('--roots',
                         action='store_true',
-                        help='also download root CAs (experimental)')
+                        help='also download root CAs')
     parser.add_argument('--verbose',
                         action='store_true',
                         help='enable verbosity')

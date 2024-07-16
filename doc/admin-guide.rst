@@ -52,7 +52,7 @@ certificates are imported into PAN-OS.
 Solution: Intermediate CA Preloading
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-``pan-chainguard`` uses the PAN-OS default trusted CA store and the
+``pan-chainguard`` uses a root store and the
 *All Certificate Information (root and intermediate) in CCADB (CSV)*
 data file as input, and determines the intermediate certificate
 chains, if available, for each root CA certificate.  These can then be
@@ -92,7 +92,7 @@ It requires the following Python packages:
 + `pan-python <https://github.com/kevinsteves/pan-python>`_
 
 ``pan-chainguard`` should run on any Unix system with Python 3.9 or
-greater, and OpenSSL or LibreSSL; it has been tested on OpenBSD 7.4,
+greater, and OpenSSL or LibreSSL; it has been tested on OpenBSD 7.5,
 Ubuntu 22.04 and macOS 14.
 
 Get pan-chainguard using ``git clone``
@@ -109,10 +109,10 @@ Get pan-chainguard using ``git clone``
   $ cd pan-chainguard
 
   $ bin/chain.py --version
-  pan-chainguard 0.0.0
+  pan-chainguard 0.4.0
 
   $ bin/guard.py --version
-  pan-chainguard 0.0.0
+  pan-chainguard 0.4.0
 
 Install pan-chainguard using ``pip``
 ....................................
@@ -122,15 +122,15 @@ Install pan-chainguard using ``pip``
   $ python3 -m pip install pan-chainguard
 
   $ chain.py --version
-  pan-chainguard 0.0.0
+  pan-chainguard 0.4.0
 
   $ guard.py --version
-  pan-chainguard 0.0.0
+  pan-chainguard 0.4.0
 
 pan-chainguard Command Line Programs
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-``pan-chainguard`` provides 3 Python command line programs and a shell
+``pan-chainguard`` provides 4 Python command line programs and a shell
 script:
 
 - ``fling.py``
@@ -144,19 +144,24 @@ script:
   exported by ``fling.py`` and creates a CSV file containing
   the SHA-256 fingerprint for each certificate.
 
+- ``sprocket.py``
+
+  Command line program which can be used to create a custom root store
+  according a user-defined policy.
+
 - ``chain.py``
 
   Command line program which takes as input:
 
   + The certificate fingerprint CSV file created by
-    ``cert-fingerprints.sh``
+    ``cert-fingerprints.sh`` or ``sprocket.py``
 
   + The All Certificate Information (root and
     intermediate) in CCADB CSV file (`AllCertificateRecordsCSVFormatv2
     <https://www.ccadb.org/resources>`_)
 
   and creates a tar archive containing the intermediate certificate
-  chains found for the PAN-OS trusted root CAs.
+  chains found for the CAs in the root store.
 
 - ``guard.py``
 
@@ -232,8 +237,146 @@ to guarantee only changes made by the admin are committed.
 Running pan-chainguard
 ----------------------
 
+Identify Source Root Store
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+``pan-chainguard`` can use a root store from PAN-OS or a custom
+root store as input.
+
+PAN-OS Root Store
+.................
+
+The PAN-OS root store (*Default Trusted Certificate Authorities*) is
+updated as part of a PAN-OS major software releases; it is not
+currently managed by content updates.
+
+The root store was updated for PAN-OS 10.0, which was released in
+July 2020.  All 10.x.x releases contain the same root store (10.0.x,
+10.1.x and 10.2.x).
+
+The root store was updated for PAN-OS 11.0, which was released in
+November 2022.  All 11.x.x releases contain the same root store
+(11.0.x, 11.1.x and 11.2.x).
+
+To use a PAN-OS root store, run the ``fling.py`` program as described
+below.
+
+Custom Root Store
+.................
+
+You can create a custom root store, using one or more of the
+major vendor root stores, which are managed by their CA certificate
+program:
+
++ `Mozilla <https://wiki.mozilla.org/CA>`_
++ `Apple <https://www.apple.com/certificateauthority/ca_program.html>`_
++ `Microsoft <https://aka.ms/RootCert>`_
++ `Google Chrome <https://g.co/chrome/root-policy>`_
+
+To use a custom root store, run the ``sprocket.py`` program as
+described below.
+
+sprocket.py
+~~~~~~~~~~~
+
+``sprocket.py`` is used to create a customised root store using the
+following policy attributes:
+
+#. Source vendor root store (one or more)
+
+   + mozilla (default)
+   + apple
+   + microsoft
+   + google
+
+#. Set operation to use when combining multiple source sets
+
+   + union - set of elements which are in any (default)
+   + intersection - set of elements which are in all
+
+#. `Derived Trust Bits <https://www.ccadb.org/cas/fields#formula-fields>`_
+   field from CCADB
+
+   + CLIENT_AUTHENTICATION
+   + CODE_SIGNING
+   + DOCUMENT_SIGNING
+   + OCSP_SIGNING
+   + SECURE_EMAIL
+   + SERVER_AUTHENTICATION
+   + TIME_STAMPING
+
+The root store policy is specified as a JSON object; the default is:
+
+::
+
+   {
+       "sources": ["mozilla"],
+       "operation": "union",
+       "trust_bits": []
+   }
+
+The following example can be used to specify a root store with
+**mozilla** and **google** sources and trust bits of
+**SERVER_AUTHENTICATION**:
+
+::
+
+   {
+       "sources": ["mozilla", "google"],
+       "operation": "union",
+       "trust_bits": ["SERVER_AUTHENTICATION"]
+   }
+
+sprocket.py Usage
+.................
+
+::
+
+   usage: sprocket.py [options]
+
+   create custom root store from CCADB
+
+   options:
+     -h, --help            show this help message and exit
+     -c PATH, --ccadb PATH
+                           CCADB AllCertificateRecordsCSVFormatv2 CSV path
+     -f PATH, --fingerprints PATH
+                           root store fingerprints CSV path
+     --policy JSON         JSON policy object path or string
+     --stats               print source stats
+     --verbose             enable verbosity
+     --debug {0,1,2,3}     enable debug
+     --version             display version
+
+sprocket.py Example
+...................
+
+The CCADB ``AllCertificateRecordsCSVFormatv2`` CSV file needs to be
+downloaded before running ``sprocket.py``.
+
+::
+
+   $ pwd
+   /home/ksteves/git/pan-chainguard
+
+   $ cd tmp
+
+   $ curl -sOJ  https://ccadb.my.salesforce-sites.com/ccadb/AllCertificateRecordsCSVFormatv2
+
+   $ ls -lh AllCertificateRecordsReport.csv
+   -rw-r--r--  1 ksteves  ksteves   7.1M Jul 14 10:39 AllCertificateRecordsReport.csv
+
+   $ cd ..
+
+   $ bin/sprocket.py --verbose --ccadb tmp/AllCertificateRecordsReport.csv \
+   > --fingerprints tmp/cert-fingerprints2.csv
+   policy: {'sources': ['mozilla'], 'operation': 'union', 'trust_bits': []}
+   mozilla: 171 total certificates
+
 fling.py
 ~~~~~~~~
+
+Use ``fling.py`` to export a PAN-OS root store.
 
 fling.py Usage
 ..............
@@ -248,7 +391,7 @@ fling.py Usage
    options:
      -h, --help          show this help message and exit
      --tag TAG, -t TAG   .panrc tagname
-     --certs PATH        PAN-OS trusted CAs archive path (default: trust-store.tgz)
+     --certs PATH        PAN-OS trusted CAs archive path (default: root-store.tgz)
      --xdebug {0,1,2,3}  pan.xapi debug
      --verbose           enable verbosity
      --debug {0,1,2,3}   enable debug
@@ -262,13 +405,13 @@ fling.py Example
    $ pwd
    /home/ksteves/git/pan-chainguard
 
-   $ mkdir -p tmp/trust-store
+   $ mkdir -p tmp/root-store
 
-   $ bin/fling.py --tag pa-460-chainguard --certs tmp/trust-store/trust-store.tgz
-   Exported 293 PAN-OS trusted CAs to tmp/trust-store/trust-store.tgz
+   $ bin/fling.py --tag pa-460-chainguard --certs tmp/root-store/root-store.tgz
+   Exported 293 PAN-OS trusted CAs to tmp/root-store/root-store.tgz
 
-   $ cd tmp/trust-store/
-   $ tar xzf trust-store.tgz
+   $ cd tmp/root-store/
+   $ tar xzf root-store.tgz
    $ ls -1 | head
    0001_Hellenic_Academic_and_Research_Institutions_RootCA_2011.cer
    0003_USERTrust_ECC_Certification_Authority.cer
@@ -283,6 +426,9 @@ fling.py Example
 
 cert-fingerprints.sh
 ~~~~~~~~~~~~~~~~~~~~
+
+Run ``cert-fingerprints.sh`` if you use ``fling.py`` to export the root
+store from PAN-OS.
 
 cert-fingerprints.sh Usage
 ..........................
@@ -300,7 +446,7 @@ cert-fingerprints.sh Example
    $ pwd
    /home/ksteves/git/pan-chainguard
 
-   $ bin/cert-fingerprints.sh tmp/trust-store > tmp/cert-fingerprints.csv
+   $ bin/cert-fingerprints.sh tmp/root-store > tmp/cert-fingerprints.csv
 
    $ head tmp/cert-fingerprints.csv
    "filename","sha256"
@@ -325,16 +471,16 @@ chain.py Usage
    $ bin/chain.py --help
    usage: chain.py [options]
 
-   generate PAN-OS intermediate CAs to preload
+   generate intermediate CAs to preload
 
    options:
      -h, --help            show this help message and exit
      -c PATH, --ccadb PATH
                            CCADB AllCertificateRecordsCSVFormatv2 CSV path
      -f PATH, --fingerprints PATH
-                           PAN-OS trusted CAs fingerprints CSV path
+                           root CAs fingerprints CSV path
      --certs PATH          certificate archive path (default: certificates.tgz)
-     --roots               also download root CAs (experimental)
+     --roots               also download root CAs
      --verbose             enable verbosity
      --debug {0,1,2,3}     enable debug
      --version             display version
@@ -343,12 +489,13 @@ chain.py Example
 ................
 
 The CCADB ``AllCertificateRecordsCSVFormatv2`` CSV file needs to be
-downloaded before running ``chain.py``.
+downloaded before running ``chain.py``.  If you downloaded it previously
+to run ``sprocket.py`` you do not need to download it again.
 
 ``chain.py`` is the most time consuming part of the process, because
 it downloads all required intermediate certificates, and optionally
-the root certificates for an experimental option in ``guard.py``,
-using the `crt.sh API <https://crt.sh/>`_, which is slow.
+the root certificates, using the `crt.sh API <https://crt.sh/>`_,
+which is slow.
 
 ``chain.py`` implements concurrent API requests using asyncio, however
 the server throttles response times in addition to returning "429 Too
@@ -361,6 +508,9 @@ periodically, and then can be used by ``guard.py`` to update
 the certificates on multiple PAN-OS instances with the same major
 version.
 
+When using a custom root store, specify the ``--roots`` option to
+also download the root CA certificates.
+
 ::
 
    $ pwd
@@ -368,21 +518,18 @@ version.
 
    $ cd tmp
 
-   $ curl -OJ  https://ccadb.my.salesforce-sites.com/ccadb/AllCertificateRecordsCSVFormatv2
-     % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
-                                    Dload  Upload   Total   Spent    Left  Speed
-   100 6041k    0 6041k    0     0   138k      0 --:--:--  0:00:43 --:--:--  919k
+   $ curl -sOJ  https://ccadb.my.salesforce-sites.com/ccadb/AllCertificateRecordsCSVFormatv2
 
    $ ls -lh AllCertificateRecordsReport.csv
-   -rw-r--r--  1 ksteves  ksteves   5.9M Jan 16 17:14 AllCertificateRecordsReport.csv
+   -rw-r--r--  1 ksteves  ksteves   7.1M Jul 14 10:39 AllCertificateRecordsReport.csv
 
    $ cd ..
 
    $ bin/chain.py --ccadb tmp/AllCertificateRecordsReport.csv --fingerprints tmp/cert-fingerprints.csv \
    > --certs tmp/certificates.tgz 2>tmp/stderr.txt
-   19 invalid PAN-OS certificates found
-   182 intermediate chains found for 274 PAN-OS trusted CAs
-   All 182 certificate chains were downloaded successfully
+   20 invalid certificates found
+   205 intermediate chains found for 273 root CAs
+   All 205 certificate chains were downloaded successfully
 
    $ echo $?
    0
@@ -428,17 +575,19 @@ guard.py Usage
    $ bin/guard.py --help
    usage: guard.py [options]
 
-   preload PAN-OS intermediate CAs
+   preload intermediate CAs
 
    options:
      -h, --help           show this help message and exit
      --tag TAG, -t TAG    .panrc tagname
      --vsys VSYS          vsys name or number
      --template TEMPLATE  Panorama template
-     --certs PATH         PAN-OS certificate archive path (default: certificates.tgz)
+     --certs PATH         certificate archive path (default: certificates.tgz)
      --add                add intermediate certificates
-     --add-roots          add root certificates (experimental)
+     --add-roots          add root certificates
      --delete             delete previously added certificates
+     --disable-trusted    disable all default trusted root CAs
+     --enable-trusted     enable all default trusted root CAs
      --commit             commit configuration
      --admin ADMIN        commit admin
      --xdebug {0,1,2,3}   pan.xapi debug
@@ -450,26 +599,33 @@ guard.py Example
 ................
 
 ``guard.py`` uses the certificate archive created by ``chain.py`` to
-import the intermediate certificates as trusted CA device certificates
-on PAN-OS.  The .panrc tagname can specify a Panorama, firewall or
-multi-vsys firewall.  ``--vsys`` is used to specify the vsys for
-multi-vsys firewalls.  ``--template`` is used to specify the Panorama
-template to update.  ``--delete`` is used to delete previously added
-certificates and when used with ``--add`` will perform an update of
-the existing intermediate certificates.
+import the intermediate certificates, and optionally the root
+certificates, as trusted CA device certificates on PAN-OS.  The .panrc
+tagname can specify a Panorama, firewall or multi-vsys firewall.
+``--vsys`` is used to specify the vsys for multi-vsys firewalls.
+``--template`` is used to specify the Panorama template to update.
+``--delete`` is used to delete previously added certificates and when
+used with ``--add`` will perform an update of the existing
+intermediate certificates.  ``--add-roots`` is used to add root
+certificates from the archive, and when used with
+``--disable-trusted`` replaces the PAN-OS root store with a custom
+root store.
 
 The device intermediate certificate names are constructed in a way
 that they should be unique and not conflict with other certificate
 names:
 
 + The length is 31 characters (the maximum length on Panorama)
-+ Starts with the 4 digit root certificate sequence number
+
++ Starts with:
+
+  - PAN-OS root store: 4 digit PAN-OS root certificate sequence number
+  - Custom root store: 4 digit sequence number 9001-9999
+
 + Followed by a single dash '-'
+
 + Followed by the first 26 characters of the uppercase hexadecimal
   certificate fingerprint
-
-.. note:: ``--add-roots`` is an experimental option which is known
-	  to cause a commit failure.
 
 .. note:: Panorama support includes:
 
@@ -487,26 +643,6 @@ names:
    201 certificates deleted
    201 intermediate certificates added
    commit: success
-
-PAN-OS Trusted CA Store Updates
--------------------------------
-
-The PAN-OS Trusted CA Store is updated as part of a PAN-OS software
-release; it is not currently managed by content updates.
-
-PAN-OS 10.x CA Store
-~~~~~~~~~~~~~~~~~~~~
-
-The certificate store was updated for PAN-OS 10.0, which was released
-in July 2020.  All 10.x.x releases contain the same store (10.0.x,
-10.1.x and 10.2.x).
-
-PAN-OS 11.x CA Store
-~~~~~~~~~~~~~~~~~~~~
-
-The certificate store was updated for PAN-OS 11.0, which was released
-in November 2022.  All 11.x.x releases contain the same store (11.0.x,
-11.1.x and 11.2.x).
 
 About the Name
 --------------
