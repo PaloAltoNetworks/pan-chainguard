@@ -332,6 +332,7 @@ sprocket.py Usage
 
 ::
 
+   $ bin/sprocket.py --help
    usage: sprocket.py [options]
 
    create custom root store from CCADB
