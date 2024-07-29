@@ -151,7 +151,7 @@ def get_certs():
                         x = 'Intermediate with no parent: %s' % sha256
                         if args.debug > 1:
                             print(x, file=sys.stderr)
-                            invalid[sha256] = x
+                        invalid[sha256] = x
                         continue
 
                     intermediates.append(sha256)
