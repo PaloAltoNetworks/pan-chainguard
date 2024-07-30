@@ -111,7 +111,7 @@ def get_certs():
                 ret, err = revoked(row)
                 if ret:
                     x = '%s %s %s' % (err, sha256, name)
-                    if args.debug > 1:
+                    if args.debug > 2:
                         print(x, file=sys.stderr)
                     invalid[sha256] = x
                     continue
@@ -119,7 +119,7 @@ def get_certs():
                 ret, err = valid_from_to(row)
                 if not ret:
                     x = '%s %s %s' % (err, sha256, name)
-                    if args.debug > 1:
+                    if args.debug > 2:
                         print(x, file=sys.stderr)
                     invalid[sha256] = x
                     continue
