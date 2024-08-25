@@ -237,15 +237,15 @@ async def get_panos_intermediates(certs, chains, invalid, warning):
                             'Not found in CCADB'), file=sys.stderr)
                         total_invalid += 1
                         continue
-                    else:
-                        status_root = certs[sha256]['Status of Root Cert']
-                        statuses = status_root.split(';')
-                        included = [': Included' in x for x in statuses]
-                        if not any(included):
-                            not_in_common_store[sha256] = status_root
-                            print('Certificate not in common root store'
-                                  ' %s: %s' % (row['filename'], status_root),
-                                  file=sys.stderr)
+
+                    status_root = certs[sha256]['Status of Root Cert']
+                    statuses = status_root.split(';')
+                    included = [': Included' in x for x in statuses]
+                    if not any(included):
+                        not_in_common_store[sha256] = status_root
+                        print('Certificate not in common root store'
+                              ' %s: %s' % (row['filename'], status_root),
+                              file=sys.stderr)
 
                     total += 1
                     if sha256 in chains:
