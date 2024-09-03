@@ -369,7 +369,17 @@ def add_cert(xapi, xpath, cert_name, cert_type, content):
     elif args.vsys is not None:
         kwargs['vsys'] = args.vsys
 
-    api_request(xapi, xapi.import_file, kwargs, 'success')
+    try:
+        xapi.import_file(**kwargs)
+    except pan.xapi.PanXapiError as e:
+        if 'Certificate is expired' in str(e):
+            if args.verbose:
+                print('%s expired' % cert_name, file=sys.stderr)
+            return False
+        else:
+            print('%s: %s: %s' % (xapi.import_file.__name__, kwargs, e),
+                  file=sys.stderr)
+            sys.exit(1)
 
     # Use function attribute to cache certificate names so we can use
     # a single API request to enable them as trusted root CAs.
