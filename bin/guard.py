@@ -23,7 +23,6 @@ import os
 import re
 import sys
 import tarfile
-import time
 import xml.etree.ElementTree as etree
 
 try:
@@ -323,12 +322,7 @@ def delete_certs(xapi, xpath):
 
     certificates = xpath.certificates()
     kwargs = {'xpath': certificates}
-    api_request(xapi, xapi.get, kwargs, 'success', ['7', '19'])
-    if xapi.status_code == '7':
-        if args.debug:
-            print('get %s code 7, retry' % certificates, file=sys.stderr)
-        time.sleep(1.0)
-        api_request(xapi, xapi.get, kwargs, 'success', '19')
+    api_request(xapi, xapi.get, kwargs, 'success', '19')
 
     total = 0
     rootca = xpath.trusted_root_ca()
