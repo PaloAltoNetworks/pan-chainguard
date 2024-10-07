@@ -1,6 +1,27 @@
 Release History
 ===============
 
+0.5.0 (2024-10-07)
+------------------
+
+- chain.py: Fix bug where only a single child certificate chain for a
+  root was used.
+
+- Add To Do List.
+
+- guard.py: When API import results in expired certificate error, skip
+  that certificate.  Allows use of an older certificate archive.
+
+- chain.py: Remove unneeded else.
+
+- chain.py: Raise debug level to 3 for revoked and expired logging.
+
+- chain.py: Fix incorrect indent for saving 'Intermediate with no
+  parent' certificate.
+
+- Add features to allow a custom root store to replace the PAN-OS root
+  store.
+
 0.4.0 (2024-07-12)
 ------------------
 
