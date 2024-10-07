@@ -154,6 +154,14 @@ def get_certs():
                         invalid[sha256] = x
                         continue
 
+                    if (trust_bits != TrustBits.NONE and
+                       TrustBits.SERVER_AUTHENTICATION not in trust_bits):
+                        x = 'Intermediate with no %s: %s' % \
+                            (TrustBits.SERVER_AUTHENTICATION.name, sha256)
+                        if args.debug > 1:
+                            print(x, file=sys.stderr)
+                        continue
+
                     intermediates.append(sha256)
                     parents[parent_sha256].append(sha256)
 
@@ -174,23 +182,24 @@ def get_certs():
 
 
 def get_cert_chains(roots, intermediates, parents):
-    chains = {}
+    chains = defaultdict(list)
 
-    for k in roots:
-        if k not in parents:
+    for root in roots:
+        if root not in parents:
             if args.debug:
-                print('Root with no child %s' % k,
+                print('Root with no child %s' % root,
                       file=sys.stderr)
             continue
 
-        for child in parents[k]:
-            chain = [k]
+        for child in parents[root]:
+            chain = []
             follow(chain, child, parents)
+            chainlen = len(chain)
             if args.debug > 1:
-                print('chain[%d]:' % len(chain),
+                print('chain[%d]:' % chainlen,
                       pprint.pformat(chain), file=sys.stderr)
 
-        chains[chain[0]] = chain
+            chains[root].append(chain)
 
     return chains
 
@@ -250,9 +259,10 @@ async def get_panos_intermediates(certs, chains, invalid, warning):
                     total += 1
                     if sha256 in chains:
                         intermediates[row['filename']] = [(ROOT, sha256)]
-                        for x in chains[sha256][1:]:
-                            intermediates[row['filename']].append(
-                                (INTERMEDIATE, x))
+                        for chain in chains[sha256]:
+                            for x in chain:
+                                intermediates[row['filename']].append(
+                                    (INTERMEDIATE, x))
                     elif args.verbose:
                         x = '%s %s' % (row['filename'], 'intermediates 0')
                         if sha256 in not_in_common_store:

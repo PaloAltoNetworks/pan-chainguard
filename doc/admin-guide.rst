@@ -528,9 +528,9 @@ also download the root CA certificates.
 
    $ bin/chain.py --ccadb tmp/AllCertificateRecordsReport.csv --fingerprints tmp/cert-fingerprints.csv \
    > --certs tmp/certificates.tgz 2>tmp/stderr.txt
-   20 invalid certificates found
-   205 intermediate chains found for 273 root CAs
-   All 205 certificate chains were downloaded successfully
+   21 invalid certificates found
+   182 intermediate chains found for 272 root CAs
+   All 182 certificate chains were downloaded successfully
 
    $ echo $?
    0
@@ -563,7 +563,17 @@ For example:
 
    $ tar tzf tmp/certificates.tgz 0555_Certum_Trusted_Root_CA
    0555_Certum_Trusted_Root_CA/root/FE7696573855773E37A95E7AD4D9CC96C30157C15D31765BA9B15704E1AE78FD.crt
+   0555_Certum_Trusted_Root_CA/intermediate/83C0A5A76844C840DFAF820FFD02ADF6573A26823EF6AF758A3384A0AC044083.crt
    0555_Certum_Trusted_Root_CA/intermediate/1C4EEA3A47ABD122568EAB547E06B52111F7F388662C246C8ECBE2660B9F26F1.crt
+   0555_Certum_Trusted_Root_CA/intermediate/4736F1ECF26A043CB4D8F94DA8302EA9E45F3D311048F3A400D01AEED1E99444.crt
+   0555_Certum_Trusted_Root_CA/intermediate/F54CE21EA0F79548F1201A619049CA15F065E49A69F26FB9CF1282C7EECF9C4C.crt
+   0555_Certum_Trusted_Root_CA/intermediate/EF3653AC5056AA4C6EF72AA922F43DAF750CA901AD1198FEA1B81E0D10B51E0A.crt
+   0555_Certum_Trusted_Root_CA/intermediate/43EDFB2C7C93E63D6566D240EB9C69CFF5C0D5C996C4AC9BCC9CE75828C3B9BE.crt
+   0555_Certum_Trusted_Root_CA/intermediate/AA0C4B7801B09FB77E423C91331EFB62A5A2A8B23A9D7C997E6A9BEEA435D2BF.crt
+   0555_Certum_Trusted_Root_CA/intermediate/B5C87A0B2239DAFE0A5285E340626269ACA5E90F57492C38E9050CA5D18BC21A.crt
+   0555_Certum_Trusted_Root_CA/intermediate/509ABBB92864C2C44D7CBC466B63950E350165EE772A3037AE8168E92226A46F.crt
+   0555_Certum_Trusted_Root_CA/intermediate/D79F1F0C8141804B39D04B2592D57AFEBE74F9460654AFF491490DBB7C5A2D74.crt
+   0555_Certum_Trusted_Root_CA/intermediate/B5D46DC027130E5CED3BE5083EB34028DD9230F4D5A36AD1924D21C0EF984CBA.crt
 
 guard.py
 ~~~~~~~~
