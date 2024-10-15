@@ -270,11 +270,11 @@ def policy_match(policy, row):
 
 
 def write_fingerprints(certs, policy_certs):
-    # duplicate PAN-OS
     def canonicalize(x):
         x = ''.join(c for c in x if ord(c) < 128)
         x = x.replace(' ', '_')
         x = x.replace(',', '_')
+        x = x.replace('/', '_')
 
         return x
 
