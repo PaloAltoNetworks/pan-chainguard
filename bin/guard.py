@@ -384,7 +384,7 @@ def add_cert(xapi, xpath, cert_name, cert_type, content):
         if args.template is not None:
             kwargs['extra_qs']['target-tpl'] = args.template
         if args.vsys is not None:
-            # XXX does not work
+            # XXX does not work; PAN-257229
             kwargs['extra_qs']['target-tpl-vsys'] = args.vsys
     elif args.vsys is not None:
         kwargs['vsys'] = args.vsys
