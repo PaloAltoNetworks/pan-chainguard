@@ -242,7 +242,9 @@ async def main_loop():
                     if args.verbose:
                         print('extracted %s' % member.name,
                               file=sys.stderr)
-                    cert_name, cert_type = parse_cert(member.name)
+                    cert_name, cert_type, sha256 = parse_cert(member.name)
+                    if exclude_cert(sha256):
+                        continue
                     f = tar.extractfile(member)
                     content = f.read()
                     if add_cert(xapi, xpath, cert_name, cert_type, content):
@@ -259,6 +261,24 @@ async def main_loop():
 
     if args.commit:
         commit(xapi, panorama)
+
+
+def exclude_cert(sha256):
+    EXCLUDE = [
+        # This root is in microsoft root store and is PAN-OS predefined
+        # 0216_CCA_India_2015_SPL.
+        # Expires Jan 29 11:36:43 2025 GMT.
+        # 'openssl verify -check_ss_sig' fails with bad signature
+        # PAN-257401
+        'C34C5DF53080078FFE45B21A7F600469917204F4F0293F1D7209393E5265C04F',
+    ]
+
+    if sha256 in EXCLUDE:
+        if args.debug:
+            print('Skip problem certificate %s' % sha256, file=sys.stderr)
+        return True
+
+    return False
 
 
 def enable_trusted(xapi, xpath):
@@ -314,7 +334,7 @@ def parse_cert(path):
     # PAN-OS certificate-name max len 63
     # Panorama certificate-name max len 31
     # PAN-99186 won't do
-    return cert_name[:31], cert_type
+    return cert_name[:31], cert_type, crt[:64]
 
 
 def delete_certs(xapi, xpath):
