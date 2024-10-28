@@ -64,6 +64,11 @@ def _now():
     return now
 
 
+# CCADB Valid From/To fields are the date only in YYYY.MM.DD format.
+# When converted to a date with time, the time used is midnight; for
+# example:
+#   2024.10.27 -> 2024-10-27 00:00:00+00:00
+
 def valid_from(row: dict[str, str]) -> Tuple[bool, Union[str, None]]:
     k = 'Valid From (GMT)'
     valid_from = datetime.strptime(row[k] + ' +0000', _FMT)
