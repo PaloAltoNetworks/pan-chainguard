@@ -1,10 +1,6 @@
 from datetime import timedelta
-import os
-import sys
 import unittest
 
-libpath = os.path.dirname(os.path.abspath(__file__))
-sys.path[:0] = [os.path.join(libpath, os.pardir)]
 from pan_chainguard.ccadb import *
 from pan_chainguard.ccadb import _now
 
