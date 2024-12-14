@@ -36,6 +36,7 @@ libpath = os.path.dirname(os.path.abspath(__file__))
 sys.path[:0] = [os.path.join(libpath, os.pardir)]
 
 from pan_chainguard import (title, __version__)
+from pan_chainguard.util import s1_in_s2
 
 args = None
 
@@ -136,16 +137,6 @@ def api_request(xapi, func, kwargs, status=None, status_code=None):
                xapi.status_code, status_code),
               file=sys.stderr)
         sys.exit(1)
-
-
-def s1_in_s2(s1, s2):
-    if isinstance(s2, str):
-        return s1 == s2
-    elif isinstance(s2, list):
-        return s1 in s2
-    else:
-        raise ValueError('Invalid type for s2. '
-                         'Must be a string or a list of strings.')
 
 
 def create_archive(store=None, test=False):

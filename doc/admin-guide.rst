@@ -24,13 +24,31 @@ Overview
 ``pan-chainguard`` is a Python3 application which uses
 `CCADB data
 <https://www.ccadb.org/resources>`_
-to derive intermediate certificate chains for trusted
-certificate authorities in PAN-OS so they can be
-`preloaded
-<https://wiki.mozilla.org/Security/CryptoEngineering/Intermediate_Preloading>`_
-as device certificates.
+and allows PAN-OS SSL decryption administrators to:
 
-Problem
+#. Create a custom, up-to-date trusted root store for PAN-OS.
+#. Determine intermediate certificate chains for trusted Certificate
+   Authorities in PAN-OS so they can be `preloaded
+   <https://wiki.mozilla.org/Security/CryptoEngineering/Intermediate_Preloading>`_
+   as device certificates.
+
+Issue 1
+-------
+
+The PAN-OS root store (*Default Trusted Certificate Authorities*) is
+updated only in PAN-OS major software releases; it is not currently
+managed by content updates.  The root store for PAN-OS 10.x.x releases
+is now over 4 years old.
+
+The impact for PAN-OS SSL decryption administrators is when the root
+CA for the server certificate is not trusted, the firewall will
+provide the forward untrust certificate to the client.  End users will
+then see errors such as *NET::ERR_CERT_AUTHORITY_INVALID* (Chrome) or
+*SEC_ERROR_UNKNOWN_ISSUER* (Firefox) until the missing trusted CAs are
+identified, the certificates are obtained, and the certificates are
+imported into PAN-OS.
+
+Issue 2
 -------
 
 Many TLS enabled origin servers suffer from a misconfiguration in
@@ -38,8 +56,8 @@ which they:
 
 #. Do not return intermediate CA certificates.
 #. Return certificates out of order.
-#. Return intermediate certificates which are not related to the CA
-   which signed the server certificate.
+#. Return intermediate certificates which are not related to the root
+   CA for the server certificate.
 
 The impact for PAN-OS SSL decryption administrators is end users will
 see errors such as *unable to get local issuer certificate* until the
@@ -49,8 +67,23 @@ sites that are misconfigured are
 the required intermediate certificates are obtained, and the
 certificates are imported into PAN-OS.
 
-Solution: Intermediate CA Preloading
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Solution 1: Create Custom Root Store
+------------------------------------
+
+``pan-chainguard`` can create a custom root store, using one or more
+of the major vendor root stores, which are managed by their CA
+certificate program:
+
++ `Mozilla <https://wiki.mozilla.org/CA>`_
++ `Apple <https://www.apple.com/certificateauthority/ca_program.html>`_
++ `Microsoft <https://aka.ms/RootCert>`_
++ `Google Chrome <https://g.co/chrome/root-policy>`_
+
+The custom root store can then be added to PAN-OS as trusted CA device
+certificates.
+
+Solution 2: Intermediate CA Preloading
+--------------------------------------
 
 ``pan-chainguard`` uses a root store and the
 *All Certificate Information (root and intermediate) in CCADB (CSV)*
@@ -90,9 +123,10 @@ It requires the following Python packages:
 
 + `aiohttp <https://github.com/aio-libs/aiohttp>`_
 + `pan-python <https://github.com/kevinsteves/pan-python>`_
++ `treelib <https://github.com/caesar0301/treelib>`_
 
 ``pan-chainguard`` should run on any Unix system with Python 3.9 or
-greater, and OpenSSL or LibreSSL; it has been tested on OpenBSD 7.5,
+greater, and OpenSSL or LibreSSL; it has been tested on OpenBSD 7.6,
 Ubuntu 22.04 and macOS 14.
 
 Get pan-chainguard using ``git clone``
@@ -103,6 +137,8 @@ Get pan-chainguard using ``git clone``
   $ python3 -m pip install aiohttp
 
   $ python3 -m pip install pan-python
+
+  $ python3 -m pip install treelib
 
   $ git clone https://github.com/PaloAltoNetworks/pan-chainguard/pan-chainguard.git
 
@@ -130,7 +166,7 @@ Install pan-chainguard using ``pip``
 pan-chainguard Command Line Programs
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-``pan-chainguard`` provides 4 Python command line programs and a shell
+``pan-chainguard`` provides 6 Python command line programs and a shell
 script:
 
 - ``fling.py``
@@ -146,28 +182,48 @@ script:
 
 - ``sprocket.py``
 
-  Command line program which can be used to create a custom root store
-  according a user-defined policy.
+  Command line program which creates a custom root store according a
+  user-defined policy.
 
 - ``chain.py``
 
   Command line program which takes as input:
 
-  + The certificate fingerprint CSV file created by
+  + The root CA fingerprint CSV file created by
     ``cert-fingerprints.sh`` or ``sprocket.py``
 
   + The All Certificate Information (root and
     intermediate) in CCADB CSV file (`AllCertificateRecordsCSVFormatv2
     <https://www.ccadb.org/resources>`_)
 
-  and creates a tar archive containing the intermediate certificate
-  chains found for the CAs in the root store.
+  and creates:
+
+  + A CSV file containing the fingerprints of the intermediate
+    certificate chains found for the CAs in the root store
+
+  + A JSON file containing the tree representation of the root
+    and intermediate certificates
+
+- ``chainring.py``
+
+  Command line program which takes as input the JSON file created by
+  ``chain.py`` and creates multiple representations of the certificate
+  tree, including HTML and text.
+
+- ``link.py``
+
+  Command line program which obtains PEM encoded X.509 certificates
+  from different sources including:
+
+  + Mozilla certificates with PEM CSV files
+  + Old (previous) certificate archive
+  + crt.sh API
 
 - ``guard.py``
 
   Command line program which takes as input the certificate archive
-  created by ``chain.py`` and imports the intermediate certificates as
-  trusted CA device certificates on PAN-OS.
+  created by ``link.py`` and imports the certificates (root and
+  intermediate) as trusted CA device certificates on PAN-OS.
 
 Command options can be displayed using ``--help`` (e.g.,
 ``chain.py --help``).
@@ -279,7 +335,7 @@ described below.
 sprocket.py
 ~~~~~~~~~~~
 
-``sprocket.py`` is used to create a customised root store using the
+``sprocket.py`` is used to create a custom root store using the
 following policy attributes:
 
 #. Source vendor root store (one or more)
@@ -335,14 +391,14 @@ sprocket.py Usage
    $ bin/sprocket.py --help
    usage: sprocket.py [options]
 
-   create custom root store from CCADB
+   create custom root store
 
    options:
      -h, --help            show this help message and exit
      -c PATH, --ccadb PATH
                            CCADB AllCertificateRecordsCSVFormatv2 CSV path
      -f PATH, --fingerprints PATH
-                           root store fingerprints CSV path
+                           root CA fingerprints CSV path
      --policy JSON         JSON policy object path or string
      --stats               print source stats
      --verbose             enable verbosity
@@ -365,19 +421,22 @@ downloaded before running ``sprocket.py``.
    $ curl -sOJ  https://ccadb.my.salesforce-sites.com/ccadb/AllCertificateRecordsCSVFormatv2
 
    $ ls -lh AllCertificateRecordsReport.csv
-   -rw-r--r--  1 ksteves  ksteves   7.1M Jul 14 10:39 AllCertificateRecordsReport.csv
+   -rw-r--r--  1 ksteves  ksteves   7.9M Dec 10 11:56 AllCertificateRecordsReport.csv
 
    $ cd ..
 
    $ bin/sprocket.py --verbose --ccadb tmp/AllCertificateRecordsReport.csv \
-   > --fingerprints tmp/cert-fingerprints2.csv
+   > --fingerprints tmp/root-fingerprints.csv
    policy: {'sources': ['mozilla'], 'operation': 'union', 'trust_bits': []}
-   mozilla: 171 total certificates
+   mozilla: 174 total certificates
 
 fling.py
 ~~~~~~~~
 
-Use ``fling.py`` to export a PAN-OS root store.
+``fling.py`` is used to export the PEM encoded X.509 certificates from
+the PAN-OS Default Trusted CA store.  It is only used when you have
+chosen to use the PAN-OS native root store; it is generally recommended
+to create an up-to-date custom root store using ``sprocket.py``.
 
 fling.py Usage
 ..............
@@ -447,22 +506,27 @@ cert-fingerprints.sh Example
    $ pwd
    /home/ksteves/git/pan-chainguard
 
-   $ bin/cert-fingerprints.sh tmp/root-store > tmp/cert-fingerprints.csv
+   $ bin/cert-fingerprints.sh tmp/root-store > tmp/root-fingerprints.csv
 
-   $ head tmp/cert-fingerprints.csv
-   "filename","sha256"
-   "0001_Hellenic_Academic_and_Research_Institutions_RootCA_2011.cer","BC104F15A48BE709DCA542A7E1D4B9DF6F054527E802EAA92D595444258AFE71"
-   "0003_USERTrust_ECC_Certification_Authority.cer","4FF460D54B9C86DABFBCFC5712E0400D2BED3FBC4D4FBDAA86E06ADCD2A9AD7A"
-   "0004_CHAMBERS_OF_COMMERCE_ROOT_-_2016.cer","04F1BEC36951BC1454A904CE32890C5DA3CDE1356B7900F6E62DFA2041EBAD51"
-   "0008_VRK_Gov._Root_CA.cer","F008733EC500DC498763CC9264C6FCEA40EC22000E927D053CE9C90BFA046CB2"
-   "0012_Hellenic_Academic_and_Research_Institutions_RootCA_2015.cer","A040929A02CE53B4ACF4F2FFC6981CE4496F755E6D45FE0B2A692BCD52523F36"
-   "0013_SZAFIR_ROOT_CA.cer","FABCF5197CDD7F458AC33832D3284021DB2425FD6BEA7A2E69B7486E8F51F9CC"
-   "0014_EE_Certification_Centre_Root_CA.cer","3E84BA4342908516E77573C0992F0979CA084E4685681FF195CCBA8A229B8A76"
-   "0016_ePKI_Root_Certification_Authority.cer","C0A6F4DC63A24BFDCF54EF2A6A082A0A72DE35803E2FF5FF527AE5D87206DFD5"
-   "0017_thawte_Primary_Root_CA_-_G2.cer","A4310D50AF18A6447190372A86AFAF8B951FFB431D837F1E5688B45971ED1557"
+   $ head tmp/root-fingerprints.csv
+   "type","sha256"
+   "root","BC104F15A48BE709DCA542A7E1D4B9DF6F054527E802EAA92D595444258AFE71"
+   "root","4FF460D54B9C86DABFBCFC5712E0400D2BED3FBC4D4FBDAA86E06ADCD2A9AD7A"
+   "root","04F1BEC36951BC1454A904CE32890C5DA3CDE1356B7900F6E62DFA2041EBAD51"
+   "root","F008733EC500DC498763CC9264C6FCEA40EC22000E927D053CE9C90BFA046CB2"
+   "root","A040929A02CE53B4ACF4F2FFC6981CE4496F755E6D45FE0B2A692BCD52523F36"
+   "root","FABCF5197CDD7F458AC33832D3284021DB2425FD6BEA7A2E69B7486E8F51F9CC"
+   "root","3E84BA4342908516E77573C0992F0979CA084E4685681FF195CCBA8A229B8A76"
+   "root","C0A6F4DC63A24BFDCF54EF2A6A082A0A72DE35803E2FF5FF527AE5D87206DFD5"
+   "root","A4310D50AF18A6447190372A86AFAF8B951FFB431D837F1E5688B45971ED1557"
 
 chain.py
 ~~~~~~~~
+
+``chain.py`` is used to determine intermediate certificate chains for
+the CAs in the root store.  It can also save the certificate metadata
+as a JSON tree structure for use in generating documents which describe
+the certificate hierarchy.
 
 chain.py Usage
 ..............
@@ -472,16 +536,17 @@ chain.py Usage
    $ bin/chain.py --help
    usage: chain.py [options]
 
-   generate intermediate CAs to preload
+   determine intermediate CAs
 
    options:
      -h, --help            show this help message and exit
      -c PATH, --ccadb PATH
                            CCADB AllCertificateRecordsCSVFormatv2 CSV path
-     -f PATH, --fingerprints PATH
-                           root CAs fingerprints CSV path
-     --certs PATH          certificate archive path (default: certificates.tgz)
-     --roots               also download root CAs
+     -r PATH, --root-fingerprints PATH
+                           root CA fingerprints CSV path
+     -i PATH, --int-fingerprints PATH
+                           intermediate CA fingerprints CSV path
+     --tree PATH           save certificate tree as JSON to path
      --verbose             enable verbosity
      --debug {0,1,2,3}     enable debug
      --version             display version
@@ -493,24 +558,126 @@ The CCADB ``AllCertificateRecordsCSVFormatv2`` CSV file needs to be
 downloaded before running ``chain.py``.  If you downloaded it previously
 to run ``sprocket.py`` you do not need to download it again.
 
-``chain.py`` is the most time consuming part of the process, because
-it downloads all required intermediate certificates, and optionally
-the root certificates, using the `crt.sh API <https://crt.sh/>`_,
-which is slow.
+::
 
-``chain.py`` implements concurrent API requests using asyncio, however
-the server throttles response times in addition to returning "429 Too
-many requests" response status when too many concurrent requests are
+   $ pwd
+   /home/ksteves/git/pan-chainguard
+
+   $ bin/chain.py --verbose -c tmp/AllCertificateRecordsReport.csv -r tmp/root-fingerprints.csv \
+   > -i tmp/intermediate-fingerprints.csv --tree tmp/certificate-tree.json
+   1729 total intermediate certificates
+
+
+chainring.py
+~~~~~~~~~~~~
+
+``chainring.py`` is used to create documents which describe the
+certificate hierarchy in various formats including:
+
++ txt - Text
++ rst - reStructuredText
++ html - Hypertext Markup Language
++ json - pretty printed JSON
+
+chainring.py Usage
+..................
+
+::
+
+   $ bin/chainring.py --help
+   usage: chainring.py [options]
+   
+   generate documents from certificate tree
+   
+   options:
+     -h, --help            show this help message and exit
+     --tree PATH           JSON certificate tree path
+     -f {txt,rst,html,json}, --format {txt,rst,html,json}
+                           output format
+     -t TITLE, --title TITLE
+                           report title
+     --verbose             enable verbosity
+     --debug {0,1,2,3}     enable debug
+     --version             display version
+
+chainring.py Example
+....................
+
+::
+
+   $ pwd
+   /home/ksteves/git/pan-chainguard
+
+   $ bin/chainring.py --tree tmp/certificate-tree.json --format txt > tmp/certificate-tree.txt
+   $ head tmp/certificate-tree.txt
+   Root
+   ├── 018E13F0772532CF809BD1B17281867283FC48C6E13BE9C69812854A490C1B05 Subject: DigiCert TLS ECC P384 Root G5 Issuer: DigiCert
+   │   ├── 0215DB7E22D36D0E7535A12691A9EC0DC7F43D83AB580C0709711C1E7A9B55EC Subject: Thawte G5 TLS ECC P-384 SHA384 2022 CA2 Issuer: DigiCert TLS ECC P384 Root G5
+   │   ├── 07F55A105E886D191FBD2253283E77B1FC1CCDCC9F26A3E6C7E69706A7593FEF Subject: GeoTrust EV G5 TLS CN ECC P-384 SHA384 2022 CA1 Issuer: DigiCert TLS ECC P384 Root G5
+   │   ├── 1D75A0B37B4AE11E883C97D3FF0DC5D84D93FE129C12DD78086C4A78DAF3F709 Subject: DigiCert Basic OV G5 TLS CN ECC P-384 SHA384 2022 CA1 Issuer: DigiCert TLS ECC P384 Root G5
+   │   ├── 290E698939A24F7B63AB14D0490DE92BEBEF6C1C2D3BE717F3775B71C1AB626D Subject: DigiCert Secure Site Pro EV G5 TLS CN ECC P-384 SHA384 2022 CA1 Issuer: DigiCert TLS ECC P384 Root G5
+   │   ├── 2C171064DBFA280A1F294F72E2A1FC24C86111B23723DB9375D3004B27E7B33B Subject: DigiCert G5 TLS EU ECC P-384 SHA384 2022 CA1 Issuer: DigiCert TLS ECC P384 Root G5
+   │   ├── 49C1F25A88B5B15A80C1A2DA11589111C5AD8E222104FDC49022FD6AEF1CF54D Subject: DigiCert Secure Site EV G5 TLS CN ECC P-384 SHA384 2022 CA1 Issuer: DigiCert TLS ECC P384 Root G5
+   │   ├── 66E795550B16497E7CF4566EC63B56660F28DBD551C357C526FBB0D7620A8112 Subject: GeoTrust G5 TLS ECC P-384 SHA384 2022 CA2 Issuer: DigiCert TLS ECC P384 Root G5
+   │   ├── 72F104084DB7914BD8AFE6E347B9257ED4C1D7FC71D3F1E51F3CF47B739B386A Subject: GeoTrust G5 TLS EC P-384 SHA384 2022 CA1 Issuer: DigiCert TLS ECC P384 Root G5
+
+link.py
+~~~~~~~
+
+``link.py`` obtains PEM encoded X.509 certificates from different
+sources including:
+
++ `Mozilla certificates with PEM CSV files
+  <https://wiki.mozilla.org/CA/Intermediate_Certificates>`_
+
+  * `Intermediate CA Certificates
+    <https://ccadb.my.salesforce-sites.com/mozilla/PublicAllIntermediateCertsWithPEMCSV>`_
+
+  * `Non-revoked, non-expired Intermediate CA Certificates chaining up to
+    roots in Mozilla's program with the Websites trust bit set
+    <https://ccadb.my.salesforce-sites.com/mozilla/MozillaIntermediateCertsCSVReport>`_
+
++ Old (previous) certificate archive
+
++ crt.sh API
+
+The `crt.sh API <https://crt.sh/>`_ can be slow.  ``link.py``
+implements concurrent API requests using asyncio, however the server
+throttles response times in addition to returning "429 Too many
+requests" response status when too many concurrent requests are
 performed.  Timeout, connection and response content errors have also
-been observed, and when seen will be retried up to 4 times.
+been observed, and when seen will be retried up to 4 times (total 5
+tries).
 
-The intermediate certificate archive only needs to be created
-periodically, and then can be used by ``guard.py`` to update
-the certificates on multiple PAN-OS instances with the same major
-version.
+Updating (or refreshing) the certificate archive only needs to be
+performed periodically when the root store is updated by
+``sprocket.py`` and/or ``chain.py`` is used to determine intermediate
+certificates for updates in CCADB.
 
-When using a custom root store, specify the ``--roots`` option to
-also download the root CA certificates.
+link.py Usage
+.............
+
+::
+
+   $ bin/link.py --help
+   usage: link.py [options]
+   
+   get CA certificates
+   
+   options:
+     -h, --help            show this help message and exit
+     -f PATH, --fingerprints PATH
+                           CA fingerprints CSV path
+     -m PATH, --certs-mozilla PATH
+                           Mozilla certs with PEM CSV path
+     --certs-old PATH      old certificate archive path
+     --certs-new PATH      new certificate archive path
+     --verbose             enable verbosity
+     --debug {0,1,2,3}     enable debug
+     --version             display version
+
+link.py Example
+................
 
 ::
 
@@ -519,30 +686,34 @@ also download the root CA certificates.
 
    $ cd tmp
 
-   $ curl -sOJ  https://ccadb.my.salesforce-sites.com/ccadb/AllCertificateRecordsCSVFormatv2
+   $ rm -f MozillaIntermediateCerts.csv 
+   $ curl -sOJ https://ccadb.my.salesforce-sites.com/mozilla/MozillaIntermediateCertsCSVReport
 
-   $ ls -lh AllCertificateRecordsReport.csv
-   -rw-r--r--  1 ksteves  ksteves   7.1M Jul 14 10:39 AllCertificateRecordsReport.csv
+   $ rm -f PublicAllIntermediateCertsWithPEMReport.csv
+   $ curl -sOJ https://ccadb.my.salesforce-sites.com/mozilla/PublicAllIntermediateCertsWithPEMCSV
 
    $ cd ..
 
-   $ bin/chain.py --ccadb tmp/AllCertificateRecordsReport.csv --fingerprints tmp/cert-fingerprints.csv \
-   > --certs tmp/certificates.tgz 2>tmp/stderr.txt
-   21 invalid certificates found
-   182 intermediate chains found for 272 root CAs
-   All 182 certificate chains were downloaded successfully
+   $ bin/link.py --verbose -f tmp/root-fingerprints.csv -f tmp/intermediate-fingerprints.csv \
+   > -m tmp/MozillaIntermediateCerts.csv -m tmp/PublicAllIntermediateCertsWithPEMReport.csv \
+   > --certs-old tmp/certificates-old.tgz --certs-new tmp/certificates-new.tgz 
+   certs-old: 1886
+   MozillaIntermediateCerts: 17
+   PublicAllIntermediateCerts: 0
+   crt.sh: 0
+   Total certs-new: 1903
 
    $ echo $?
    0
 
-``chain.py`` exits with the following status codes:
+``link.py`` exits with the following status codes:
 
 ===========  =========
 Status Code  Condition
 ===========  =========
-0            success, all certificates were downloaded
+0            success, all certificates were obtained
 1            fatal error
-2            error, some certificates were not downloaded
+2            error, some certificates were not obtained
 ===========  =========
 
 Review ``tmp/stderr.txt`` for warnings and errors.
@@ -551,29 +722,26 @@ The tar archive uses the following directory structure:
 
 ::
 
-   PAN-OS root certificate name/
-     root/
-       certificate-SHA-256.crt
-     intermediate/
-       certificate-SHA-256.crt
+   root/
+     certificate-SHA-256.pem
+   intermediate/
+     certificate-SHA-256.pem
 
 For example:
 
 ::
 
-   $ tar tzf tmp/certificates.tgz 0555_Certum_Trusted_Root_CA
-   0555_Certum_Trusted_Root_CA/root/FE7696573855773E37A95E7AD4D9CC96C30157C15D31765BA9B15704E1AE78FD.crt
-   0555_Certum_Trusted_Root_CA/intermediate/83C0A5A76844C840DFAF820FFD02ADF6573A26823EF6AF758A3384A0AC044083.crt
-   0555_Certum_Trusted_Root_CA/intermediate/1C4EEA3A47ABD122568EAB547E06B52111F7F388662C246C8ECBE2660B9F26F1.crt
-   0555_Certum_Trusted_Root_CA/intermediate/4736F1ECF26A043CB4D8F94DA8302EA9E45F3D311048F3A400D01AEED1E99444.crt
-   0555_Certum_Trusted_Root_CA/intermediate/F54CE21EA0F79548F1201A619049CA15F065E49A69F26FB9CF1282C7EECF9C4C.crt
-   0555_Certum_Trusted_Root_CA/intermediate/EF3653AC5056AA4C6EF72AA922F43DAF750CA901AD1198FEA1B81E0D10B51E0A.crt
-   0555_Certum_Trusted_Root_CA/intermediate/43EDFB2C7C93E63D6566D240EB9C69CFF5C0D5C996C4AC9BCC9CE75828C3B9BE.crt
-   0555_Certum_Trusted_Root_CA/intermediate/AA0C4B7801B09FB77E423C91331EFB62A5A2A8B23A9D7C997E6A9BEEA435D2BF.crt
-   0555_Certum_Trusted_Root_CA/intermediate/B5C87A0B2239DAFE0A5285E340626269ACA5E90F57492C38E9050CA5D18BC21A.crt
-   0555_Certum_Trusted_Root_CA/intermediate/509ABBB92864C2C44D7CBC466B63950E350165EE772A3037AE8168E92226A46F.crt
-   0555_Certum_Trusted_Root_CA/intermediate/D79F1F0C8141804B39D04B2592D57AFEBE74F9460654AFF491490DBB7C5A2D74.crt
-   0555_Certum_Trusted_Root_CA/intermediate/B5D46DC027130E5CED3BE5083EB34028DD9230F4D5A36AD1924D21C0EF984CBA.crt
+   $ tar tzf tmp/certificates-new.tgz | head
+   root/55926084EC963A64B96E2ABE01CE0BA86A64FBFEBCC7AAB5AFC155B37FD76066.pem
+   root/2E44102AB58CB85419451C8E19D9ACF3662CAFBC614B6A53960A30F7D0E2EB41.pem
+   root/8ECDE6884F3D87B1125BA31AC3FCB13D7016DE7F57CC904FE1CB97C6AE98196E.pem
+   root/1BA5B2AA8C65401A82960118F80BEC4F62304D83CEC4713A19C39C011EA46DB4.pem
+   root/18CE6CFE7BF14E60B2E347B8DFE868CB31D02EBB3ADA271569F50343B46DB3A4.pem
+   root/E35D28419ED02025CFA69038CD623962458DA5C695FBDEA3C22B0BFB25897092.pem
+   root/568D6905A2C88708A4B3025190EDCFEDB1974A606A13C6E5290FCB2AE63EDAB5.pem
+   root/D8E0FEBC1DB2E38D00940F37D27D41344D993E734B99D5656D9778D4D8143624.pem
+   root/6B328085625318AA50D173C98D8BDA09D57E27413D114CF787A0F5D06C030CF6.pem
+   root/5C58468D55F58E497E743982D2B50010B6D165374ACF83A7D4A32DB768C4408E.pem
 
 guard.py
 ~~~~~~~~
@@ -586,19 +754,17 @@ guard.py Usage
    $ bin/guard.py --help
    usage: guard.py [options]
 
-   preload intermediate CAs
+   update PAN-OS trusted CAs
 
    options:
      -h, --help           show this help message and exit
      --tag TAG, -t TAG    .panrc tagname
      --vsys VSYS          vsys name or number
      --template TEMPLATE  Panorama template
-     --certs PATH         certificate archive path (default: certificates.tgz)
+     --certs PATH         certificate archive path
      --add                add intermediate certificates
      --add-roots          add root certificates
      --delete             delete previously added certificates
-     --disable-trusted    disable all default trusted root CAs
-     --enable-trusted     enable all default trusted root CAs
      --commit             commit configuration
      --admin ADMIN        commit admin
      --xdebug {0,1,2,3}   pan.xapi debug
@@ -609,7 +775,7 @@ guard.py Usage
 guard.py Example
 ................
 
-``guard.py`` uses the certificate archive created by ``chain.py`` to
+``guard.py`` uses the certificate archive created by ``link.py`` to
 import the intermediate certificates, and optionally the root
 certificates, as trusted CA device certificates on PAN-OS.  The .panrc
 tagname can specify a Panorama, firewall or multi-vsys firewall.
@@ -618,9 +784,8 @@ tagname can specify a Panorama, firewall or multi-vsys firewall.
 ``--delete`` is used to delete previously added certificates and when
 used with ``--add`` will perform an update of the existing
 intermediate certificates.  ``--add-roots`` is used to add root
-certificates from the archive, and when used with
-``--disable-trusted`` replaces the PAN-OS root store with a custom
-root store.
+certificates from the archive and is used to update the default PAN-OS
+root store with a custom root store.
 
 The device intermediate certificate names are constructed in a way
 that they should be unique and not conflict with other certificate
@@ -628,10 +793,7 @@ names:
 
 + The length is 31 characters (the maximum length on Panorama)
 
-+ Starts with:
-
-  - PAN-OS root store: 4 digit PAN-OS root certificate sequence number
-  - Custom root store: 4 digit sequence number 9001-9999
++ Starts with 'LINK'
 
 + Followed by a single dash '-'
 
@@ -649,10 +811,11 @@ names:
    $ pwd
    /home/ksteves/git/pan-chainguard
 
-   $ bin/guard.py --tag pa-460-chainguard --admin chainguard --vsys 2 --certs tmp/certificates.tgz \
-   > --delete --add --commit
-   201 certificates deleted
-   201 intermediate certificates added
+   $ bin/guard.py --tag pa-460-chainguard --admin chainguard --certs tmp/certificates-new.tgz \
+   > --delete --add --add-roots --commit
+   0 certificates deleted
+   174 root certificates added
+   1729 intermediate certificates added
    commit: success
 
 About the Name
@@ -683,3 +846,6 @@ References
 
 - `crt.sh API Usage
   <https://groups.google.com/g/crtsh/c/puZMuqBaWOE>`_
+
+- `Mozilla CA/Intermediate Certificates
+  <https://wiki.mozilla.org/CA/Intermediate_Certificates>`_

@@ -1,36 +1,54 @@
 # pan-chainguard Data and Process Flow
 
 ```mermaid
-graph TD
+flowchart TD
     panos{{"PAN-OS NGFW, Panorama<br/>Export Default Trusted CAs"}}
     panos2{{"PAN-OS NGFW, Panorama<br/>Update Device Certificates"}}
     truststore[(trust-store.tgz)]
     truststoredir[(trust-store/)]
-    trustpolicy[(policy.json)]
-    fling(fling.py)
-    chain(chain.py)
-    guard(guard.py)
-    sprocket(sprocket.py)
+    trustpolicy[("policy.json<br/>[mozilla,apple,microsoft,google]")]
+    fling("fling.py<br/>export PAN-OS trusted CAs")
+    sprocket("sprocket.py<br/>create custom root store")
+    chain("chain.py<br/>determine intermediate CAs")
+    link("link.py<br/>get CA certificates")
+    guard("guard.py<br/>update PAN-OS trusted CAs")
+	chainring("chainring.py<br/>generate documents from certificate tree")
     curl(curl)
     untar(untar)
     fingerprints(cert-fingerprints.sh)
-    fingerprintscsv[(cert-fingerprints.csv)]
+    rootfingerprintscsv[(root-fingerprints.csv)]
+    intfingerprintscsv[(intermediate-fingerprints.csv)]
+	tree[(tree.json)]
+	treedocs[("certificate documents (txt, html, rst, ...)")]
     ccadb[("AllCertificateRecordsReport.csv</br>CCADB All Certificate Information")]
-    certificates[(certificates.tgz)]
+    mozilla[("MozillaIntermediateCerts.csv</br>PublicAllIntermediateCertsWithPEMReport.csv</br>Intermediate CA certificates from Mozilla")]
+    crtsh>crt.sh:443]
+    oldcertificates[(certificates-old.tgz)]
+    newcertificates[(certificates-new.tgz)]
 
     panos<-->|XML API|fling
     fling-->truststore
     truststore-->untar
     untar-->truststoredir
     truststoredir-->fingerprints
-    fingerprints-->fingerprintscsv
+    fingerprints-->rootfingerprintscsv
     curl-->ccadb
     ccadb-->chain
     trustpolicy-->sprocket
     ccadb-->sprocket
-    sprocket-->fingerprintscsv
-    fingerprintscsv-->chain
-    chain-->certificates
-    certificates-->guard
+    sprocket-->rootfingerprintscsv
+    rootfingerprintscsv-->chain
+    chain-->intfingerprintscsv
+	chain-->tree
+	tree-->chainring
+	chainring-->treedocs
+    rootfingerprintscsv-->link
+    intfingerprintscsv-->link
+	curl-->mozilla
+    mozilla-->link
+    oldcertificates-->link
+    crtsh-->|API|link
+    link-->newcertificates
+    newcertificates-->guard
     guard<-->|XML API|panos2
 ```

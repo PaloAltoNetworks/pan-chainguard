@@ -1,16 +1,34 @@
-pan-chainguard - Preload Trusted CA Intermediate Certificate Chains on PAN-OS
-=============================================================================
+pan-chainguard - Manage Root Store and Intermediate Certificate Chains on PAN-OS
+================================================================================
 
 ``pan-chainguard`` is a Python3 application which uses
 `CCADB data
 <https://www.ccadb.org/resources>`_
-to derive intermediate certificate chains for trusted
-certificate authorities in PAN-OS so they can be
-`preloaded
-<https://wiki.mozilla.org/Security/CryptoEngineering/Intermediate_Preloading>`_
-as device certificates.
+and allows PAN-OS SSL decryption administrators to:
 
-Problem
+#. Create a custom, up-to-date trusted root store for PAN-OS.
+#. Determine intermediate certificate chains for trusted Certificate
+   Authorities in PAN-OS so they can be `preloaded
+   <https://wiki.mozilla.org/Security/CryptoEngineering/Intermediate_Preloading>`_
+   as device certificates.
+
+Issue 1
+-------
+
+The PAN-OS root store (*Default Trusted Certificate Authorities*) is
+updated only in PAN-OS major software releases; it is not currently
+managed by content updates.  The root store for PAN-OS 10.x.x releases
+is now over 4 years old.
+
+The impact for PAN-OS SSL decryption administrators is when the root
+CA for the server certificate is not trusted, the firewall will
+provide the forward untrust certificate to the client.  End users will
+then see errors such as *NET::ERR_CERT_AUTHORITY_INVALID* (Chrome) or
+*SEC_ERROR_UNKNOWN_ISSUER* (Firefox) until the missing trusted CAs are
+identified, the certificates are obtained, and the certificates are
+imported into PAN-OS.
+
+Issue 2
 -------
 
 Many TLS enabled origin servers suffer from a misconfiguration in
@@ -18,8 +36,8 @@ which they:
 
 #. Do not return intermediate CA certificates.
 #. Return certificates out of order.
-#. Return intermediate certificates which are not related to the CA
-   which signed the server certificate.
+#. Return intermediate certificates which are not related to the root
+   CA for the server certificate.
 
 The impact for PAN-OS SSL decryption administrators is end users will
 see errors such as *unable to get local issuer certificate* until the
@@ -29,8 +47,23 @@ sites that are misconfigured are
 the required intermediate certificates are obtained, and the
 certificates are imported into PAN-OS.
 
-Solution: Intermediate CA Preloading
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Solution 1: Create Custom Root Store
+------------------------------------
+
+``pan-chainguard`` can create a custom root store, using one or more
+of the major vendor root stores, which are managed by their CA
+certificate program:
+
++ `Mozilla <https://wiki.mozilla.org/CA>`_
++ `Apple <https://www.apple.com/certificateauthority/ca_program.html>`_
++ `Microsoft <https://aka.ms/RootCert>`_
++ `Google Chrome <https://g.co/chrome/root-policy>`_
+
+The custom root store can then be added to PAN-OS as trusted CA device
+certificates.
+
+Solution 2: Intermediate CA Preloading
+--------------------------------------
 
 ``pan-chainguard`` uses a root store and the
 *All Certificate Information (root and intermediate) in CCADB (CSV)*
