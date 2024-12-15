@@ -30,6 +30,7 @@ sys.path[:0] = [os.path.join(libpath, os.pardir)]
 from pan_chainguard import title, __version__
 from pan_chainguard.ccadb import (revoked, valid_from_to,
                                   derived_trust_bits, TrustBits, TrustBitsMap2)
+import pan_chainguard.util
 
 
 DEFAULT_POLICY = {
@@ -81,7 +82,7 @@ async def main_loop():
             ', '.join(policy['sources']), len(policy_certs)))
 
     if args.fingerprints is not None:
-        write_fingerprints(certs, policy_certs)
+        write_fingerprints(policy_certs)
 
 
 def read_certs():
@@ -269,37 +270,18 @@ def policy_match(policy, row):
     return False
 
 
-def write_fingerprints(certs, policy_certs):
-    def canonicalize(x):
-        x = ''.join(c for c in x if ord(c) < 128)
-        x = x.replace(' ', '_')
-        x = x.replace(',', '_')
-        x = x.replace('/', '_')
-
-        return x
-
-    fieldnames = [
-        'filename',
-        'sha256',
-    ]
+def write_fingerprints(policy_certs):
+    data = []
+    for x in policy_certs:
+        row = {}
+        row['type'] = 'root'
+        row['sha256'] = x
+        data.append(row)
 
     try:
-        with open(args.fingerprints, 'w', newline='') as csvfile:
-            writer = csv.DictWriter(csvfile,
-                                    dialect='unix',
-                                    fieldnames=fieldnames)
-            writer.writeheader()
-            sequence = 9000
-            for k in policy_certs:
-                row = {}
-                row['sha256'] = k
-                sequence += 1
-                name = certs[k]['Certificate Name']
-                row['filename'] = '%04d_%s' % (sequence,
-                                               canonicalize(name))
-                writer.writerow(row)
-
-    except OSError as e:
+        pan_chainguard.util.write_fingerprints(path=args.fingerprints,
+                                               data=data)
+    except pan_chainguard.util.UtilError as e:
         print('%s: %s' % (args.fingerprints, e), file=sys.stderr)
         sys.exit(1)
 
@@ -307,7 +289,7 @@ def write_fingerprints(certs, policy_certs):
 def parse_args():
     parser = argparse.ArgumentParser(
         usage='%(prog)s [options]',
-        description='create custom root store from CCADB')
+        description='create custom root store')
     # curl -OJ \
     # https://ccadb.my.salesforce-sites.com/ccadb/AllCertificateRecordsCSVFormatv2
     parser.add_argument('-c', '--ccadb',
@@ -316,7 +298,7 @@ def parse_args():
                         help='CCADB AllCertificateRecordsCSVFormatv2 CSV path')
     parser.add_argument('-f', '--fingerprints',
                         metavar='PATH',
-                        help='root store fingerprints CSV path')
+                        help='root CA fingerprints CSV path')
     parser.add_argument('--policy',
                         metavar='JSON',
                         help='JSON policy object path or string')

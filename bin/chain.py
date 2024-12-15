@@ -16,29 +16,21 @@
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 #
 
-import aiohttp
 import argparse
 import asyncio
 from collections import defaultdict
 import csv
-import io
+import json
 import os
-import pprint
 import sys
-import tarfile
-import time
+from treelib import Node, Tree
 
 libpath = os.path.dirname(os.path.abspath(__file__))
 sys.path[:0] = [os.path.join(libpath, os.pardir)]
 
 from pan_chainguard import title, __version__
 from pan_chainguard.ccadb import *
-from pan_chainguard.crtsh import ArgsError, CrtShApi
-
-ROOT = 'root'
-INTERMEDIATE = 'intermediate'
-MAX_TASKS = 3  # concurrent crt.sh API requests
-CRT_SH_TIMEOUT = 60
+import pan_chainguard.util
 
 args = None
 
@@ -53,50 +45,29 @@ def main():
 
 
 async def main_loop():
-    create_archive(test=True)
+    certs, invalid, warning = get_certs()
 
-    certs, invalid, warning, roots, intermediates, parents = get_certs()
-    if args.debug:
-        print('roots %d, intermediates %d, parents %d' %
-              (len(roots), len(intermediates), len(parents)))
-
-    chains = get_cert_chains(roots, intermediates, parents)
-    if args.debug > 1:
-        print('chains %d (root=>intermediates)' % len(chains),
-              pprint.pformat(chains),
-              file=sys.stderr)
-
-    total, total_invalid, panos = await get_panos_intermediates(
-        certs, chains, invalid, warning)
-    print('%d invalid certificates found' % total_invalid)
-    print('%d intermediate chains found for %d root CAs' % (
-        len(panos), total))
-    if args.debug > 1:
-        print('intermediate chains', pprint.pformat(panos),
-              file=sys.stderr)
-
-    errors, certificates = await get_cert_files(panos)
-    if errors:
-        print('Error: %d certificates were not downloaded' % errors)
-    else:
-        print('All %d certificate chains were downloaded successfully'
-              % len(certificates))
-
+    tree = get_tree(certs)
     if args.debug > 2:
-        print('certificates', pprint.pformat(certificates),
-              file=sys.stderr)
+        x = tree.show(stdout=False)
+        print(x, file=sys.stderr, end='')
 
-    create_archive(certificates)
+    total_invalid, newtree, intermediates = get_intermediates(
+        tree, invalid, warning)
 
-    return 2 if errors else 0
+    if args.debug:
+        x = newtree.show(stdout=False)
+        print(x, file=sys.stderr, end='')
+
+    write_fingerprints(intermediates)
+    write_tree(newtree)
+
+    return 0
 
 
 def get_certs():
     invalid = {}
     warning = {}
-    roots = []
-    intermediates = []
-    parents = defaultdict(list)
     certs = {}
     duplicates = defaultdict(list)
 
@@ -107,6 +78,8 @@ def get_certs():
             for row in reader:
                 sha256 = row['SHA-256 Fingerprint']
                 name = row['Certificate Name']
+                cert_type = row['Certificate Record Type']
+                parent_sha256 = row['Parent SHA-256 Fingerprint']
 
                 ret, err = revoked(row)
                 if ret:
@@ -124,29 +97,21 @@ def get_certs():
                     invalid[sha256] = x
                     continue
 
-                trust_bits = derived_trust_bits(row)
-                if (trust_bits != TrustBits.NONE and
-                   TrustBits.SERVER_AUTHENTICATION not in trust_bits):
-                    x = 'Missing %s in %s %s' % (
-                        TrustBits.SERVER_AUTHENTICATION.name,
-                        trust_bits, sha256)
-                    warning[sha256] = x
-
-                cert_type = row['Certificate Record Type']
-
                 if sha256 in certs:
                     if sha256 not in duplicates:
                         duplicates[sha256].append(certs[sha256])
                     duplicates[sha256].append(row)
                     continue
 
-                certs[sha256] = row
-
                 if cert_type == 'Root Certificate':
-                    roots.append(sha256)
+                    if parent_sha256:
+                        x = 'Root with parent: %s' % sha256
+                        if args.debug > 1:
+                            print(x, file=sys.stderr)
+                        invalid[sha256] = x
+                        continue
 
                 if cert_type == 'Intermediate Certificate':
-                    parent_sha256 = row['Parent SHA-256 Fingerprint']
                     if not parent_sha256:
                         x = 'Intermediate with no parent: %s' % sha256
                         if args.debug > 1:
@@ -154,22 +119,24 @@ def get_certs():
                         invalid[sha256] = x
                         continue
 
+                    trust_bits = derived_trust_bits(row)
                     if (trust_bits != TrustBits.NONE and
                        TrustBits.SERVER_AUTHENTICATION not in trust_bits):
-                        x = 'Intermediate with no %s: %s' % \
-                            (TrustBits.SERVER_AUTHENTICATION.name, sha256)
+                        x = 'Missing %s in %s %s' % (
+                            TrustBits.SERVER_AUTHENTICATION.name,
+                            trust_bits, sha256)
                         if args.debug > 1:
                             print(x, file=sys.stderr)
+                        invalid[sha256] = x
                         continue
 
-                    intermediates.append(sha256)
-                    parents[parent_sha256].append(sha256)
+                certs[sha256] = row
 
     except OSError as e:
         print('%s: %s' % (args.ccadb, e), file=sys.stderr)
         sys.exit(1)
 
-    if args.debug:
+    if args.debug > 1:
         for sha256 in duplicates:
             print('Duplicate certificates %s' % sha256, file=sys.stderr)
             for x in duplicates[sha256]:
@@ -178,316 +145,172 @@ def get_certs():
                                       x['Salesforce Record ID']),
                       file=sys.stderr)
 
-    return certs, invalid, warning, roots, intermediates, parents
+    return certs, invalid, warning
 
 
-def get_cert_chains(roots, intermediates, parents):
-    chains = defaultdict(list)
+def get_tree(certs):
+    nodes = {}
 
-    for root in roots:
-        if root not in parents:
-            if args.debug:
-                print('Root with no child %s' % root,
-                      file=sys.stderr)
-            continue
+    for row in certs.values():
+        sha256 = row['SHA-256 Fingerprint']
+        name = row['Certificate Name']
+        cert_type = row['Certificate Record Type']
+        parent_sha256 = row['Parent SHA-256 Fingerprint']
+        parent_name = row['Parent Certificate Name']
 
-        for child in parents[root]:
-            chain = []
-            follow(chain, child, parents)
-            chainlen = len(chain)
-            if args.debug > 1:
-                print('chain[%d]:' % chainlen,
-                      pprint.pformat(chain), file=sys.stderr)
+        tag = f'{sha256} Subject: {name} Issuer: {parent_name}'
+        nodes[sha256] = Node(tag=tag, identifier=sha256, data=row)
 
-            chains[root].append(chain)
+    waiting_nodes = defaultdict(list)
 
-    return chains
+    tree = Tree()
+    tree.add_node(Node(tag='Root', identifier=0))
+
+    for node in nodes.values():
+        row = node.data
+        sha256 = row['SHA-256 Fingerprint']
+        parent_sha256 = row['Parent SHA-256 Fingerprint']
+
+        if not parent_sha256:
+            tree.add_node(nodes[sha256], parent=0)
+        else:
+            if tree.contains(parent_sha256):
+                tree.add_node(nodes[sha256], parent=nodes[parent_sha256])
+                # is node a parent for any waiting nodes
+                if sha256 in waiting_nodes:
+                    for x in waiting_nodes[sha256]:
+                        tree.add_node(nodes[x], parent=nodes[sha256])
+                    del waiting_nodes[sha256]
+            else:
+                # node's parent not in tree, add node to waiting list
+                waiting_nodes[parent_sha256].append(sha256)
+
+    if args.debug > 1 and waiting_nodes:
+        print('Warning: nodes with no parent', file=sys.stderr)
+        for x in waiting_nodes:
+            print('parent', x, 'nodes', waiting_nodes[x], file=sys.stderr)
+
+    return tree
 
 
-def follow(chain, k, parents):
-    if args.debug > 1:
-        print('follow[%d]:' % len(chain), k, file=sys.stderr)
-
-    chain.append(k)
-    if k in parents:
-        for child in parents[k]:
-            follow(chain, child, parents)
-
-
-async def get_panos_intermediates(certs, chains, invalid, warning):
-    intermediates = {}
-    not_in_common_store = {}
-    total = 0
+def get_intermediates(tree, invalid, warning):
+    intermediates = []
     total_invalid = 0
 
-    if args.fingerprints:
-        try:
-            with open(args.fingerprints, 'r', newline='') as csvfile:
-                reader = csv.DictReader(csvfile,
-                                        dialect='unix')
-                for row in reader:
-                    sha256 = row['sha256']
-
-                    if sha256 in warning:
-                        print('Certificate warning %s: %s' % (
-                            row['filename'],
-                            warning[sha256]), file=sys.stderr)
-
-                    if sha256 in invalid:
-                        print('Invalid certificate %s: %s' % (
-                            row['filename'],
-                            invalid[sha256]), file=sys.stderr)
-                        total_invalid += 1
-                        continue
-
-                    if sha256 not in certs:
-                        print('Invalid certificate %s: %s' % (
-                            row['filename'],
-                            'Not found in CCADB'), file=sys.stderr)
-                        total_invalid += 1
-                        continue
-
-                    status_root = certs[sha256]['Status of Root Cert']
-                    statuses = status_root.split(';')
-                    included = [': Included' in x for x in statuses]
-                    if not any(included):
-                        not_in_common_store[sha256] = status_root
-                        print('Certificate not in common root store'
-                              ' %s: %s' % (row['filename'], status_root),
-                              file=sys.stderr)
-
-                    total += 1
-                    if sha256 in chains:
-                        intermediates[row['filename']] = [(ROOT, sha256)]
-                        for chain in chains[sha256]:
-                            for x in chain:
-                                intermediates[row['filename']].append(
-                                    (INTERMEDIATE, x))
-                    elif args.verbose:
-                        x = '%s %s' % (row['filename'], 'intermediates 0')
-                        if sha256 in not_in_common_store:
-                            x += ' (not in common root store)'
-                        print(x, file=sys.stderr)
-
-        except OSError as e:
-            print('%s: %s' % (args.fingerprints, e), file=sys.stderr)
-            sys.exit(1)
-
-    return total, total_invalid, intermediates
-
-
-async def download(api, sequence, sha256):
-    tries = 0
-    MAX_TRIES = 5
-    RETRY_SLEEP = 5.0
-
-    RETRY_STATUS = [
-        429,  # Too Many Requests
-        502,  # Bad Gateway
-        503,  # Service Unavailable
-        504,  # Gateway Time-out
-    ]
-
-    while True:
-        tries += 1
-        try:
-            resp = await api.download(id=sha256[1])
-
-            if resp.status in RETRY_STATUS:
-                x = '%d %s %s %s' % (
-                    resp.status, resp.reason, sequence, sha256[1])
-                if tries == MAX_TRIES:
-                    print('no retry after try %d %s' % (tries, x),
-                          file=sys.stderr)
-                    x = 'download failed ' + x
-                    break
-                print('retry after try %d %s' % (tries, x),
-                      file=sys.stderr)
-                await asyncio.sleep(RETRY_SLEEP)
-            elif resp.status != 200:
-                x = 'download failed %d %s %s %s' % (
-                    resp.status, resp.reason, sequence, sha256[1])
-                break
-            else:
-                filename, content = await api.content(resp=resp)
-                if filename is None:
-                    filename = sha256[1] + '.crt'
-
-                start = '-----BEGIN CERTIFICATE-----'
-                end = '-----END CERTIFICATE-----\n'
-                if (content.startswith(start) and
-                   content.endswith(end)):
-                    return filename, content, sequence, sha256[0]
-                else:
-                    # XXX ephemeral?
-                    x = 'content malformed %s %s %s' % (
-                        sequence, sha256[1], content)
-                    if tries == MAX_TRIES:
-                        print('no retry after try %d %s' % (tries, x),
-                              file=sys.stderr)
-                        x = 'download failed ' + x
-                        break
-                    print('retry after try %d %s' % (tries, x),
-                          file=sys.stderr)
-                    await asyncio.sleep(RETRY_SLEEP)
-
-        except (asyncio.TimeoutError,
-                asyncio.CancelledError,  # XXX
-                aiohttp.ClientError) as e:
-            msg = e if str(e) else type(e).__name__
-            x = 'CrtShApi: %s %s %s' % (msg, sequence, sha256[1])
-            if tries == MAX_TRIES:
-                print('no retry after try %d %s' % (tries, x),
-                      file=sys.stderr)
-                x = 'download failed ' + x
-                break
-            print('retry after try %d %s' % (tries, x),
-                  file=sys.stderr)
-            # no sleep
-
-        except ArgsError as e:
-            x = 'CrtShApi: %s' % e
-            break
-
-    return None, x, None, None
-
-
-async def get_cert_files(panos):
-    user_agent = '%s/%s' % (title, __version__)
-    headers = {'user-agent': user_agent}
-
     try:
-        api = CrtShApi(timeout=CRT_SH_TIMEOUT, headers=headers)
-    except ArgsError as e:
-        print('CrtShApi: %s' % e, file=sys.stderr)
+        data = pan_chainguard.util.read_fingerprints(
+            path=args.root_fingerprints)
+    except pan_chainguard.util.UtilError as e:
+        print('%s: %s' % (args.root_fingerprints, e), file=sys.stderr)
         sys.exit(1)
-    else:
-        errors, certificates = await process_roots(api, panos)
-    finally:
-        await api.session.close()
 
-    return errors, certificates
+    newtree = Tree()
+    newtree.add_node(Node(tag='Root', identifier=0))
 
+    for row in data:
+        sha256 = row['sha256']
 
-async def process_roots(api, roots):
-    certificates = defaultdict(list)
-    tasks = []
-    start = time.time()
-    total = 0
-    errors = 0
+        if sha256 in warning:
+            print('Certificate warning: %s' % (
+                warning[sha256]), file=sys.stderr)
 
-    for sequence in roots:
-        sequence_friendly = sequence
-        if sequence.endswith('.cer'):
-            sequence_friendly = sequence[:-4]
-        if args.verbose:
-            print('download %s intermediates %d' % (
-                sequence_friendly,
-                len(roots[sequence][1:])))
+        if sha256 in invalid:
+            print('Invalid certificate: %s' % (
+                invalid[sha256]), file=sys.stderr)
+            total_invalid += 1
+            continue
 
-        for sha256 in roots[sequence]:
-            if not args.roots and sha256[0] == ROOT:
-                continue
-            total += 1
-            tasks.append(download(api, sequence_friendly, sha256))
+        if not tree.contains(sha256):
+            print('Not found in CCADB: %s' % (
+                sha256), file=sys.stderr)
+            total_invalid += 1
+            continue
 
-            if len(tasks) == MAX_TASKS:
-                errors += await run_tasks(tasks, certificates)
-                tasks = []
+        node = tree.get_node(sha256)
+        status_root = node.data['Status of Root Cert']
+        statuses = status_root.split(';')
+        included = [': Included' in x for x in statuses]
+        if not any(included):
+            print('Certificate not in common root store: '
+                  '%s: %s' % (sha256, status_root),
+                  file=sys.stderr)
 
-    if len(tasks):
-        errors += await run_tasks(tasks, certificates)
+        subtree = tree.subtree(sha256)
+        nodes = subtree.all_nodes()
+        for node in nodes[1:]:
+            intermediates.append(node.identifier)
+        for node in nodes:
+            parent = subtree.parent(node.identifier)
+            newtree.add_node(
+                node=node,
+                parent=0 if parent is None else parent.identifier)
 
-    if args.debug:
-        end = time.time()
-        elapsed = end - start
-        mins = elapsed // 60
-        secs = elapsed % 60
-        avg = elapsed / total if total > 0 else 0
-        print('%d tasks, elapsed %.2f seconds, %dm%ds, avg %.2fs' %
-              (total, elapsed, mins, secs, avg),
-              file=sys.stderr)
+        if args.debug > 1:
+            print(subtree, end='', file=sys.stderr)
+            nodes_ = [x.identifier for x in nodes]
+            print(len(nodes_), nodes_, file=sys.stderr)
 
-    return errors, certificates
-
-
-async def run_tasks(tasks, certificates):
-    INTERVAL_WAIT = 3.3  # random throttle sweet spot to avoid TimeoutError
-    errors = 0
-
-    if args.debug:
-        print('running %d tasks' % len(tasks),
-              file=sys.stderr)
-        start = time.time()
-
-    for coro in asyncio.as_completed(tasks):
-        filename, content, sequence, cert_type = await coro
-        if filename is None:
-            # error
-            print(content, file=sys.stderr)
-            errors += 1
-        else:
-            certificates[sequence].append((cert_type, filename, content))
-
-    if args.debug:
-        end = time.time()
-        elapsed = end - start
-        rate = len(tasks) / elapsed
-        rate2 = elapsed / len(tasks)
-        print('%d tasks complete, elapsed %.2f seconds, '
-              '%.2f tasks/sec, %.2f secs/task' %
-              (len(tasks), elapsed, rate, rate2), file=sys.stderr)
-        print('sleeping %.2fs' % INTERVAL_WAIT, file=sys.stderr)
-        await asyncio.sleep(INTERVAL_WAIT)
-
-    return errors
+    return total_invalid, newtree, intermediates
 
 
-def create_archive(certificates=None, test=False):
-    if not certificates:
+def write_fingerprints(intermediates):
+    if not args.int_fingerprints:
         return
 
+    data = []
+    for x in intermediates:
+        row = {
+            'type': 'intermediate',
+            'sha256': x,
+        }
+        data.append(row)
+
     try:
-        with tarfile.open(name=args.certs, mode='w:gz') as tar:
-            if test:
-                os.unlink(args.certs)
-                return
-            for sequence in sorted(certificates.keys()):
-                for cert in certificates[sequence]:
-                    name = os.path.join(sequence, cert[0], cert[1])
-                    member = tarfile.TarInfo(name=name)
-                    member.size = len(cert[2])
-                    member.mtime = time.time()
-                    f = io.BytesIO(cert[2].encode())
-                    tar.addfile(member, fileobj=f)
-    except (tarfile.TarError, OSError) as e:
-        print("tarfile %s: %s" % (args.certs, e), file=sys.stderr)
+        pan_chainguard.util.write_fingerprints(
+            path=args.int_fingerprints,
+            data=data)
+    except pan_chainguard.util.UtilError as e:
+        print('%s: %s' % (args.int_fingerprints, e), file=sys.stderr)
+        sys.exit(1)
+
+    if args.verbose:
+        print('%d total intermediate certificates' % len(data))
+
+
+def write_tree(tree):
+    if not args.tree:
+        return
+
+    data = pan_chainguard.util.tree_to_dict(tree=tree)
+
+    try:
+        with open(args.tree, 'w') as f:
+            json.dump(data, f, separators=(',', ':'))
+    except (OSError, TypeError) as e:
+        print('%s: %s' % (args.tree, e), file=sys.stderr)
         sys.exit(1)
 
 
 def parse_args():
     parser = argparse.ArgumentParser(
         usage='%(prog)s [options]',
-        description='generate intermediate CAs to preload')
+        description='determine intermediate CAs')
     # curl -OJ \
     # https://ccadb.my.salesforce-sites.com/ccadb/AllCertificateRecordsCSVFormatv2
     parser.add_argument('-c', '--ccadb',
                         required=True,
                         metavar='PATH',
                         help='CCADB AllCertificateRecordsCSVFormatv2 CSV path')
-    # sh cert-fingerprints.sh cert-dir
-    parser.add_argument('-f', '--fingerprints',
+    parser.add_argument('-r', '--root-fingerprints',
+                        required=True,
                         metavar='PATH',
-                        help='root CAs fingerprints CSV path')
-    x = 'certificates.tgz'
-    parser.add_argument('--certs',
-                        default=x,
+                        help='root CA fingerprints CSV path')
+    parser.add_argument('-i', '--int-fingerprints',
                         metavar='PATH',
-                        help='certificate archive path'
-                        ' (default: %s)' % x)
-    parser.add_argument('--roots',
-                        action='store_true',
-                        help='also download root CAs')
+                        help='intermediate CA fingerprints CSV path')
+    parser.add_argument('--tree',
+                        metavar='PATH',
+                        help='save certificate tree as JSON to path')
     parser.add_argument('--verbose',
                         action='store_true',
                         help='enable verbosity')

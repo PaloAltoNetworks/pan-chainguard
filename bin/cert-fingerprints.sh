@@ -9,12 +9,12 @@ usage() {
 fingerprints() {
     dir=$1
 
-    echo '"filename","sha256"'
+    echo '"type","sha256"'
     for file in $(ls $dir/*.cer); do
 	fp=$(openssl x509 -noout -fingerprint -sha256 -in $file)
 	fp=$(echo $fp | sed -e 's/.*=//')
 	fp=$(echo $fp | sed -e 's/://g')
-	echo \"$(basename $file)\",\"$fp\"
+	echo \"root\",\"$fp\"
     done
 }
 

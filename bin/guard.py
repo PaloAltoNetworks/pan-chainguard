@@ -36,6 +36,7 @@ libpath = os.path.dirname(os.path.abspath(__file__))
 sys.path[:0] = [os.path.join(libpath, os.pardir)]
 
 from pan_chainguard import (title, __version__)
+import pan_chainguard.util
 
 args = None
 
@@ -232,25 +233,26 @@ async def main_loop():
         delete_certs(xapi, xpath)
 
     if args.add or args.add_roots:
+        if args.certs is None:
+            print('--certs argument required', file=sys.stderr)
+            sys.exit(1)
+
         total = {
             'root': 0,
             'intermediate': 0,
         }
         try:
-            with tarfile.open(name=args.certs, mode='r') as tar:
-                for member in tar:
-                    if args.verbose:
-                        print('extracted %s' % member.name,
-                              file=sys.stderr)
-                    cert_name, cert_type, sha256 = parse_cert(member.name)
-                    if exclude_cert(sha256):
-                        continue
-                    f = tar.extractfile(member)
-                    content = f.read()
-                    if add_cert(xapi, xpath, cert_name, cert_type, content):
-                        total[cert_type] += 1
-        except (tarfile.TarError, OSError) as e:
-            print("tarfile %s: %s" % (args.certs, e), file=sys.stderr)
+            data = pan_chainguard.util.read_cert_archive(
+                path=args.certs)
+            for sha256 in data:
+                if exclude_cert(sha256):
+                    continue
+                cert_type, content = data[sha256]
+                cert_name = pan_chainguard.util.hash_to_name(sha256=sha256)
+                if add_cert(xapi, xpath, cert_name, cert_type, content):
+                    total[cert_type] += 1
+        except pan_chainguard.util.UtilError as e:
+            print(str(e), file=sys.stderr)
             sys.exit(1)
 
         add_trusted_root_cas(xapi, xpath, add_cert.cert_names)
@@ -319,26 +321,10 @@ def disable_trusted(xapi, xpath):
     print('%d default trusted root CAs disabled' % total)
 
 
-def parse_cert(path):
-    pat = (r'^\d{4,4}_[().\w-]+/(intermediate|root)/'
-           r'[0-9A-F]{64,64}\.crt$')
-    if not re.search(pat, path):
-        print('malformed path in archive: %s' % path,
-              file=sys.stderr)
-        sys.exit(1)
-
-    head, crt = os.path.split(path)
-    name, cert_type = os.path.split(head)
-    cert_name = name[:4] + '-' + crt[:64]
-
-    # PAN-OS certificate-name max len 63
-    # Panorama certificate-name max len 31
-    # PAN-99186 won't do
-    return cert_name[:31], cert_type, crt[:64]
-
-
 def delete_certs(xapi, xpath):
-    pat = r'^\d{4,4}-[0-9A-F]{26,26}$'
+    # XXX keep compatible with sequence based naming for now
+    # pat = r'^LINK-[0-9A-F]{26,26}$'
+    pat = r'^(\d{4,4}|LINK)-[0-9A-F]{26,26}$'
 
     certificates = xpath.certificates()
     kwargs = {'xpath': certificates}
@@ -357,6 +343,8 @@ def delete_certs(xapi, xpath):
 
             entry = "/entry[@name='%s']" % name
             kwargs = {'xpath': certificates + entry}
+            # XXX can return status_code 20 intermittently; workaround is
+            # to re-run
             api_request(xapi, xapi.delete, kwargs, 'success', '20')
 
             total += 1
@@ -439,7 +427,8 @@ def api_request(xapi, func, kwargs, status=None, status_code=None):
               file=sys.stderr)
         sys.exit(1)
 
-    if status is not None and not s1_in_s2(xapi.status, status):
+    if (status is not None and
+       not pan_chainguard.util.s1_in_s2(xapi.status, status)):
         print('%s: %s: status %s != %s' %
               (func.__name__, kwargs,
                xapi.status, status),
@@ -447,7 +436,7 @@ def api_request(xapi, func, kwargs, status=None, status_code=None):
         sys.exit(1)
 
     if (status_code is not None and
-       not s1_in_s2(xapi.status_code, status_code)):
+       not pan_chainguard.util.s1_in_s2(xapi.status_code, status_code)):
         print('%s: %s: status_code %s != %s' %
               (func.__name__, kwargs,
                xapi.status_code, status_code),
@@ -522,16 +511,6 @@ def commit(xapi, panorama):
     print()
 
 
-def s1_in_s2(s1, s2):
-    if isinstance(s2, str):
-        return s1 == s2
-    elif isinstance(s2, list):
-        return s1 in s2
-    else:
-        raise ValueError('Invalid type for s2. '
-                         'Must be a string or a list of strings.')
-
-
 def parse_args():
     def check_vsys(x):
         if x.isdigit():
@@ -540,7 +519,7 @@ def parse_args():
 
     parser = argparse.ArgumentParser(
         usage='%(prog)s [options]',
-        description='preload intermediate CAs')
+        description='update PAN-OS trusted CAs')
     parser.add_argument('--tag', '-t',
                         help='.panrc tagname')
     parser.add_argument('--vsys',
@@ -548,12 +527,9 @@ def parse_args():
                         help='vsys name or number')
     parser.add_argument('--template',
                         help='Panorama template')
-    x = 'certificates.tgz'
     parser.add_argument('--certs',
-                        default=x,
                         metavar='PATH',
-                        help='certificate archive path'
-                        ' (default: %s)' % x)
+                        help='certificate archive path')
     parser.add_argument('--add',
                         action='store_true',
                         help='add intermediate certificates')
@@ -563,12 +539,18 @@ def parse_args():
     parser.add_argument('--delete',
                         action='store_true',
                         help='delete previously added certificates')
+    # XXX experimental
+    # We don't want to have a condition where default trusted CAs
+    # are disabled but there are no replacement root CAs.  Better
+    # to just keep default trusted CAs enabled.
     parser.add_argument('--disable-trusted',
                         action='store_true',
-                        help='disable all default trusted root CAs')
+                        help=argparse.SUPPRESS)
+#                        help='disable all default trusted root CAs')
     parser.add_argument('--enable-trusted',
                         action='store_true',
-                        help='enable all default trusted root CAs')
+                        help=argparse.SUPPRESS)
+#                        help='enable all default trusted root CAs')
     parser.add_argument('--commit',
                         action='store_true',
                         help='commit configuration')
