@@ -1,6 +1,38 @@
 Release History
 ===============
 
+0.6.0 (2024-12-15)
+------------------
+
+- Split chain.py into separate programs for:
+
+  - Intermediate certificate determination (chain.py)
+  - Certificate download (link.py)
+
+- Re-implement chain.py to use a tree (using treelib package).
+
+- Add chainring.py to generate documents from JSON certificate tree.
+
+- Get CA certificates program (link.py) can use alternate certificate
+  sources before downloading from crt.sh.
+
+- Allow update of root store only, without adding intermediate
+  certificates.
+
+- Certificate name on PAN-OS has been changed to
+  'LINK-[0-9A-F]{26,26}' (sequence number replaced by 'LINK').
+
+- Add tests for CCADB module.
+
+- guard.py:
+
+  PAN-257401 is an issue where a specific certificate, when imported
+  as a device certificate and set as a trusted root CA, results in a
+  commit error due to a bad signature.  Implement temporary workaround
+  to not import this certificate on --add.
+
+- sprocket.py: Fix GitHub Issue #3.
+
 0.5.0 (2024-10-07)
 ------------------
 
