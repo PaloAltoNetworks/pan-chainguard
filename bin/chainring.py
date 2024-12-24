@@ -114,7 +114,11 @@ def main():
 async def main_loop():
     tree = read_tree()
 
-    if tree and args.format:
+    if args.test_collisions:
+        if not test_collisions(tree):
+            return 1
+
+    if args.format:
         for format in args.format:
             formats[format](tree)
 
@@ -122,9 +126,6 @@ async def main_loop():
 
 
 def read_tree():
-    if not args.tree:
-        return
-
     try:
         with open(args.tree, 'r') as f:
             json_data = f.read()
@@ -142,21 +143,51 @@ def read_tree():
     return tree
 
 
+# The first 26 characters of the SHA-256 fingerprint (length 64) are
+# used for the PAN-OS certificate name; test name for collisions.
+def test_collisions(tree):
+    data = pan_chainguard.util.tree_to_dict(tree=tree)
+
+    names = []
+    collisions = []
+
+    for x in data['nodes']:
+        if x['identifier']:
+            name = pan_chainguard.util.hash_to_name(
+                sha256=x['identifier'])
+            if name in names:
+                collisions.append(name)
+                print('collision %s' % name, file=sys.stderr)
+            else:
+                names.append(name)
+
+    if collisions:
+        print('%d certificate name collisions: %s' %
+              (len(collisions), collisions),
+              file=sys.stderr)
+        return False
+    else:
+        print('no certificate name collisions', file=sys.stderr)
+        return True
+
+
 def parse_args():
     parser = argparse.ArgumentParser(
         usage='%(prog)s [options]',
-        description='generate documents from certificate tree')
+        description='certificate tree analysis and reporting')
     parser.add_argument('--tree',
                         required=True,
                         metavar='PATH',
                         help='JSON certificate tree path')
     parser.add_argument('-f', '--format',
-                        required=True,
                         action='append',
                         choices=formats.keys(),
                         help='output format')
     parser.add_argument('-t', '--title',
                         help='report title')
+    parser.add_argument('--test-collisions',
+                        action='store_true',
+                        help='test for certificate name collisions')
     parser.add_argument('--verbose',
                         action='store_true',
                         help='enable verbosity')

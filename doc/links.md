@@ -12,7 +12,7 @@ flowchart TD
     chain("chain.py<br/>determine intermediate CAs")
     link("link.py<br/>get CA certificates")
     guard("guard.py<br/>update PAN-OS trusted CAs")
-	chainring("chainring.py<br/>generate documents from certificate tree")
+	chainring("chainring.py<br/>certificate tree analysis and reporting")
     curl(curl)
     untar(untar)
     fingerprints(cert-fingerprints.sh)

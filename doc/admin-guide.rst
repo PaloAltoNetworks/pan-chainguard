@@ -579,6 +579,10 @@ certificate hierarchy in various formats including:
 + html - Hypertext Markup Language
 + json - pretty printed JSON
 
+It is also used to test for collisions in PAN-OS certificate names,
+which are derived using the first 26 characters of the certificate
+SHA-256 fingerprint, which is 64 characters.
+
 chainring.py Usage
 ..................
 
@@ -587,7 +591,7 @@ chainring.py Usage
    $ bin/chainring.py --help
    usage: chainring.py [options]
    
-   generate documents from certificate tree
+   certificate tree analysis and reporting
    
    options:
      -h, --help            show this help message and exit
@@ -596,6 +600,7 @@ chainring.py Usage
                            output format
      -t TITLE, --title TITLE
                            report title
+     --test-collisions     test for certificate name collisions
      --verbose             enable verbosity
      --debug {0,1,2,3}     enable debug
      --version             display version
@@ -787,9 +792,12 @@ intermediate certificates.  ``--add-roots`` is used to add root
 certificates from the archive and is used to update the default PAN-OS
 root store with a custom root store.
 
-The device intermediate certificate names are constructed in a way
-that they should be unique and not conflict with other certificate
-names:
+The device certificate names can have a maximum length of 31
+characters on Panorama and 63 on PAN-OS.  They are constructed in a
+way to avoid conflict with other user and machine defined certificate
+names, and also to have a well-defined pattern so ``guard.py`` can
+manage certificates it owns.  The PAN-OS certificate name pattern
+(format) used is:
 
 + The length is 31 characters (the maximum length on Panorama)
 
@@ -805,6 +813,9 @@ names:
 	  + import to Panorama device certificates
 	  + import to Template shared device certificates
 	  + commit to Panorama
+
+.. note:: ``chainring.py --test-collisions`` can be used to test for
+          collisions in PAN-OS certificate names.
 
 ::
 
