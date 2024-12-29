@@ -155,10 +155,13 @@ def get_tree(certs):
         sha256 = row['SHA-256 Fingerprint']
         name = row['Certificate Name']
         cert_type = row['Certificate Record Type']
-        parent_sha256 = row['Parent SHA-256 Fingerprint']
         parent_name = row['Parent Certificate Name']
 
-        tag = f'{sha256} Subject: {name} Issuer: {parent_name}'
+        tag = f'{sha256} Subject: "{name}"'
+        if cert_type == 'Root Certificate':
+            tag += f' CA-Owner: "{parent_name}"'
+        else:
+            tag += f' Issuer: "{parent_name}"'
         nodes[sha256] = Node(tag=tag, identifier=sha256, data=row)
 
     waiting_nodes = defaultdict(list)
