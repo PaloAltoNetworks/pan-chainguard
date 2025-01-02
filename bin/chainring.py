@@ -69,7 +69,13 @@ def format_html(tree):
         node = tree[node_id]
         children = tree.children(node_id)
 
-        html = f'<li>{escape(node.tag)}\n'
+        sha256 = str(node_id)
+        if len(sha256) == 64:
+            html = (f'<li><a href="https://crt.sh/?q={sha256}">'
+                    f'<code>{sha256}</code></a>'
+                    f'{escape(node.tag[64:])}\n')
+        else:
+            html = f'<li>{escape(node.tag)}\n'
 
         if children:
             html += '<ul>'
