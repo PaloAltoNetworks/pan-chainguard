@@ -20,9 +20,10 @@ import argparse
 import asyncio
 import logging
 import os
+import pprint
 import re
 import sys
-import tarfile
+import time
 import xml.etree.ElementTree as etree
 
 try:
@@ -37,6 +38,9 @@ sys.path[:0] = [os.path.join(libpath, os.pardir)]
 
 from pan_chainguard import (title, __version__)
 import pan_chainguard.util
+
+# XXX keep compatible with sequence based naming for now
+NAME_RE = pan_chainguard.util.NAME_RE_COMPAT
 
 args = None
 
@@ -192,21 +196,20 @@ async def main_loop():
     xapi = None
     panorama = False
 
-    if args.tag:
-        try:
-            xapi = pan.xapi.PanXapi(tag=args.tag,
-                                    debug=args.xdebug)
-            xapi.ad_hoc(modify_qs=True,
-                        qs={'type': 'version'})
-            elem = xapi.element_root.find('./result/model')
-            if elem is not None:
-                if elem.text == 'Panorama':
-                    panorama = True
-            else:
-                print("Can't get model", file=sys.stderr)
-        except pan.xapi.PanXapiError as e:
-            print('pan.xapi.PanXapi:', e, file=sys.stderr)
-            sys.exit(1)
+    try:
+        xapi = pan.xapi.PanXapi(tag=args.tag,
+                                debug=args.xdebug)
+        xapi.ad_hoc(modify_qs=True,
+                    qs={'type': 'version'})
+        elem = xapi.element_root.find('./result/model')
+        if elem is not None:
+            if elem.text == 'Panorama':
+                panorama = True
+        else:
+            print("Can't get model", file=sys.stderr)
+    except pan.xapi.PanXapiError as e:
+        print('pan.xapi.PanXapi:', e, file=sys.stderr)
+        sys.exit(1)
 
     xpath = Xpath(panorama=panorama,
                   vsys=args.vsys,
@@ -217,49 +220,32 @@ async def main_loop():
         print(xpath.trusted_root_ca(), file=sys.stderr)
         print(xpath.root_ca_exclude_list(), file=sys.stderr)
 
-    if (any([args.disable_trusted, args.enable_trusted,
-             args.delete, args.add, args.add_roots, args.commit]) and
-       xapi is None):
-        print('--tag argument required', file=sys.stderr)
-        sys.exit(1)
+    if args.show:
+        show(xapi, xpath)
 
+    # experimental
     if args.enable_trusted:
         enable_trusted(xapi, xpath)
 
+    # experimental
     if args.disable_trusted:
         disable_trusted(xapi, xpath)
+
+    if args.update_trusted:
+        update_trusted_root_cas(xapi, xpath, quiet=False)
 
     if args.delete:
         delete_certs(xapi, xpath)
 
-    if args.add or args.add_roots:
+    if args.update:
         if args.certs is None:
             print('--certs argument required', file=sys.stderr)
             sys.exit(1)
-
-        total = {
-            'root': 0,
-            'intermediate': 0,
-        }
-        try:
-            data = pan_chainguard.util.read_cert_archive(
-                path=args.certs)
-            for sha256 in data:
-                if exclude_cert(sha256):
-                    continue
-                cert_type, content = data[sha256]
-                cert_name = pan_chainguard.util.hash_to_name(sha256=sha256)
-                if add_cert(xapi, xpath, cert_name, cert_type, content):
-                    total[cert_type] += 1
-        except pan_chainguard.util.UtilError as e:
-            print(str(e), file=sys.stderr)
+        if args.type is None:
+            print('--type argument required', file=sys.stderr)
             sys.exit(1)
 
-        add_trusted_root_cas(xapi, xpath, add_cert.cert_names)
-
-        for x in total:
-            if total[x] > 0:
-                print('%d %s certificates added' % (total[x], x))
+        update_certs(xapi, xpath)
 
     if args.commit:
         commit(xapi, panorama)
@@ -286,79 +272,260 @@ def exclude_cert(sha256):
 def enable_trusted(xapi, xpath):
     kwargs = {'xpath': xpath.root_ca_exclude_list()}
     api_request(xapi, xapi.get, kwargs, 'success', ['7', '19'])
-    entries = xapi.element_root.findall('./result/root-ca-exclude-list/member')
-    if len(entries) > 0:
-        api_request(xapi, xapi.delete, kwargs, 'success', ['7', '20'])
-    print('%d default trusted root CAs enabled' % len(entries))
+    disabled = xapi.element_root.findall(
+        './result/root-ca-exclude-list/member')
+
+    if args.dry_run:
+        kwargs2 = {'xpath': '/config/predefined/trusted-root-ca'}
+        api_request(xapi, xapi.get, kwargs2, 'success', '19')
+        total = xapi.element_root.findall(
+            './result/trusted-root-ca/entry')
+
+        print('enable-trusted dry-run: %d default trusted root CAs,'
+              ' %d are disabled, %d to enable' % (
+                  len(total), len(disabled), len(disabled)))
+        return
+
+    if len(disabled):
+        api_request(xapi, xapi.delete, kwargs, 'success', '20')
+
+    print('%d default trusted root CAs enabled' % len(disabled))
 
 
 def disable_trusted(xapi, xpath):
     kwargs = {'xpath': '/config/predefined/trusted-root-ca'}
     api_request(xapi, xapi.get, kwargs, 'success', '19')
-
-    total = 0
     entries = xapi.element_root.findall('./result/trusted-root-ca/entry')
+
+    kwargs = {'xpath': xpath.root_ca_exclude_list()}
+    api_request(xapi, xapi.get, kwargs, 'success', ['7', '19'])
+    disabled = xapi.element_root.findall(
+        './result/root-ca-exclude-list/member')
+
+    if args.dry_run:
+        enabled = len(entries) - len(disabled)
+        print('disable-trusted dry-run: %d default trusted root CAs,'
+              ' %d are enabled, %d to disable' % (
+                  len(entries), enabled, enabled))
+        return
+
+    disabled_ = []
+    for entry in disabled:
+        name = entry.text
+        disabled_.append(name)
 
     members = []
     for entry in entries:
         name = entry.attrib['name']
+        if name in disabled_:
+            continue
         member = '<member>%s</member>' % name
         members.append(member)
 
-        total += 1
         if args.verbose:
             print('disabling', name, file=sys.stderr)
 
-    root_ca_exclude = xpath.root_ca_exclude_list()
-    element = ''.join(members)
+    if members:
+        root_ca_exclude = xpath.root_ca_exclude_list()
+        element = ''.join(members)
 
-    kwargs = {
-        'xpath': root_ca_exclude,
-        'element': element,
-    }
-    api_request(xapi, xapi.set, kwargs, 'success', '20')
+        kwargs = {
+            'xpath': root_ca_exclude,
+            'element': element,
+        }
+        api_request(xapi, xapi.set, kwargs, 'success', '20')
 
-    print('%d default trusted root CAs disabled' % total)
+    print('%d default trusted root CAs disabled' % len(members))
 
 
-def delete_certs(xapi, xpath):
-    # XXX keep compatible with sequence based naming for now
-    # pat = r'^LINK-[0-9A-F]{26,26}$'
-    pat = r'^(\d{4,4}|LINK)-[0-9A-F]{26,26}$'
-
+def get_certs(xapi, xpath):
     certificates = xpath.certificates()
     kwargs = {'xpath': certificates}
-    api_request(xapi, xapi.get, kwargs, 'success', '19')
+    api_request(xapi, xapi.get, kwargs, 'success', ['7', '19'])
+    if xapi.status_code == '7':
+        return []
 
-    total = 0
-    rootca = xpath.trusted_root_ca()
     entries = xapi.element_root.findall('./result/certificate/entry')
+
+    data = {}
+    prog = re.compile(NAME_RE)
+    progcn = re.compile(r'/CN=([^/]+)')
 
     for entry in entries:
         name = entry.attrib['name']
-        if re.search(pat, name):
-            member = "/member[text()='%s']" % name
-            kwargs = {'xpath': rootca + member}
-            api_request(xapi, xapi.delete, kwargs, 'success', ['7', '20'])
+        if prog.search(name):
+            subject = entry.find('./subject').text
+            match = progcn.search(subject)
+            if match:
+                subject = match.group(1)
+            issuer = entry.find('./issuer').text
+            match = progcn.search(issuer)
+            if match:
+                issuer = match.group(1)
+            expiry = entry.find('./expiry-epoch').text
+            try:
+                if time.time() > int(expiry):
+                    expired = True
+                else:
+                    expired = False
+            except ValueError as e:
+                print('%s expiry-epoch %s: %s' % (
+                    name, expiry, e), file=sys.stderr)
 
-            entry = "/entry[@name='%s']" % name
-            kwargs = {'xpath': certificates + entry}
-            # XXX can return status_code 20 intermittently; workaround is
-            # to re-run
-            api_request(xapi, xapi.delete, kwargs, 'success', '20')
+            v = {
+                'subject': subject,
+                'issuer': issuer,
+                'expired': expired,
+            }
+            data[name] = v
 
+    return data
+
+
+def delete_certs(xapi, xpath):
+    data = get_certs(xapi, xpath)
+
+    if args.dry_run:
+        print('delete dry-run: %d to delete' % len(data))
+        return
+
+    for name in data:
+        delete_cert(xapi, xpath, name)
+
+    print('%d certificates deleted' % len(data))
+
+
+def delete_cert(xapi, xpath, name):
+    rootca = xpath.trusted_root_ca()
+    member = "/member[text()='%s']" % name
+    kwargs = {'xpath': rootca + member}
+    api_request(xapi, xapi.delete, kwargs, 'success', ['7', '20'])
+
+    certificates = xpath.certificates()
+    entry = "/entry[@name='%s']" % name
+    kwargs = {'xpath': certificates + entry}
+    # XXX can return status_code 7 intermittently; workaround is
+    # to re-run
+    api_request(xapi, xapi.delete, kwargs, 'success', '20')
+    if args.verbose:
+        print('deleted', name, file=sys.stderr)
+
+
+def get_trusted_root_cas(xapi, xpath):
+    trusted_root_ca = xpath.trusted_root_ca()
+    kwargs = {'xpath': trusted_root_ca}
+    api_request(xapi, xapi.get, kwargs, 'success', ['7', '19'])
+
+    prog = re.compile(NAME_RE)
+    data = []
+    if xapi.status_code == '19':
+        entries = xapi.element_root.findall(
+            './result/trusted-root-CA/member')
+        for entry in entries:
+            name = entry.text
+            if prog.search(name):
+                data.append(name)
+
+    return data
+
+
+def update_trusted_root_cas(xapi, xpath, quiet=True):
+    cert_names = get_certs(xapi, xpath)
+    add = []
+
+    if cert_names:
+        data = get_trusted_root_cas(xapi, xpath)
+        if data:
+            for name in cert_names:
+                if name not in data:
+                    add.append(name)
+        else:
+            add.extend(cert_names)
+
+    if args.dry_run:
+        print('update-trusted dry-run: %d certificates'
+              ' to enable as trusted root CAs' % len(add))
+        return
+
+    if add:
+        add_trusted_root_cas(xapi, xpath, add)
+
+    if not quiet:
+        print('%d certificates enabled as trusted root CA' % len(add))
+
+
+def add_trusted_root_cas(xapi, xpath, cert_names):
+    members = []
+
+    for x in cert_names:
+        members.append('<member>%s</member>' % x)
+
+    trusted_root_ca = xpath.trusted_root_ca()
+    element = ''.join(members)
+
+    kwargs = {
+        'xpath': trusted_root_ca,
+        'element': element,
+    }
+
+    api_request(xapi, xapi.set, kwargs, 'success', '20')
+
+
+def update_certs(xapi, xpath):
+    old = get_certs(xapi, xpath)
+
+    new = {}
+    try:
+        data = pan_chainguard.util.read_cert_archive(
+            path=args.certs)
+    except pan_chainguard.util.UtilError as e:
+        print(str(e), file=sys.stderr)
+        sys.exit(1)
+
+    for sha256 in data:
+        if exclude_cert(sha256):
+            continue
+        cert_type, content = data[sha256]
+        if cert_type not in args.type:
+            continue
+        cert_name = pan_chainguard.util.hash_to_name(sha256=sha256)
+        new[cert_name] = content
+
+    old_set = set(old)
+    new_set = set(new.keys())
+
+    if args.debug > 2:
+        print('old', pprint.pformat(old_set), file=sys.stderr)
+        print('new', pprint.pformat(new_set), file=sys.stderr)
+
+    delete = list(old_set - new_set)
+    add = list(new_set - old_set)
+
+    if args.debug > 1:
+        print('update delete', pprint.pformat(delete), file=sys.stderr)
+        print('update add', pprint.pformat(add), file=sys.stderr)
+
+    if args.dry_run:
+        print('update dry-run: %d to delete, %d to add' % (
+            len(delete), len(add)))
+        return
+
+    for name in delete:
+        delete_cert(xapi, xpath, name)
+    print('%d certificates deleted' % len(delete))
+
+    total = 0
+    for name in add:
+        if add_cert(xapi, xpath, name, new[name]):
             total += 1
-            if args.verbose:
-                print('deleted', name, file=sys.stderr)
 
-    print('%d certificates deleted' % total)
+    if total:
+        add_trusted_root_cas(xapi, xpath, add_cert.cert_names)
+
+    print('%d certificates added' % total)
 
 
-def add_cert(xapi, xpath, cert_name, cert_type, content):
-    if (cert_type == 'root' and not args.add_roots or
-       cert_type == 'intermediate' and not args.add):
-        return False
-
+def add_cert(xapi, xpath, cert_name, content):
     kwargs = {
         'category': 'certificate',
         'file': content,
@@ -382,7 +549,7 @@ def add_cert(xapi, xpath, cert_name, cert_type, content):
     except pan.xapi.PanXapiError as e:
         if 'Certificate is expired' in str(e):
             if args.verbose:
-                print('%s expired' % cert_name, file=sys.stderr)
+                print('certificate is expired %s' % cert_name, file=sys.stderr)
             return False
         else:
             print('%s: %s: %s' % (xapi.import_file.__name__, kwargs, e),
@@ -397,51 +564,49 @@ def add_cert(xapi, xpath, cert_name, cert_type, content):
         add_cert.cert_names = [cert_name]
 
     if args.verbose:
-        print('added %s %s' % (cert_type, cert_name), file=sys.stderr)
+        print('added %s' % cert_name, file=sys.stderr)
 
     return True
 
 
-def add_trusted_root_cas(xapi, xpath, cert_names):
-    members = []
+def show(xapi, xpath):
+    # XXX future?
+    prefix = ' ' * 0
 
-    for x in cert_names:
-        members.append('<member>%s</member>' % x)
+    data = get_certs(xapi, xpath)
+    pr = []
+    num_expired = 0
+    for x in data:
+        expired = ''
+        if data[x]['expired']:
+            num_expired += 1
+            expired = ' (expired)'
+        if data[x]['subject'] == data[x]['issuer']:
+            # Root
+            # XXX subject == issuer can be an intermediate
+            type_ = 'R'
+        else:
+            # Intermediate
+            type_ = 'I'
+        m = '%s%s %s%s Subject: "%s" Issuer: "%s"' % (
+            prefix, x, type_, expired,
+            data[x]['subject'], data[x]['issuer'])
+        pr.append(m)
 
-    trustedca = xpath.trusted_root_ca()
-    element = ''.join(members)
+    expired = ''
+    if num_expired:
+        expired = ' (%d expired)' % num_expired
+    print('%d Device Certificates%s' % (len(pr), expired))
+    if pr and args.verbose:
+        print('\n'.join(pr))
 
-    kwargs = {
-        'xpath': trustedca,
-        'element': element,
-    }
-
-    api_request(xapi, xapi.set, kwargs, 'success', '20')
-
-
-def api_request(xapi, func, kwargs, status=None, status_code=None):
-    try:
-        func(**kwargs)
-    except pan.xapi.PanXapiError as e:
-        print('%s: %s: %s' % (func.__name__, kwargs, e),
-              file=sys.stderr)
-        sys.exit(1)
-
-    if (status is not None and
-       not pan_chainguard.util.s1_in_s2(xapi.status, status)):
-        print('%s: %s: status %s != %s' %
-              (func.__name__, kwargs,
-               xapi.status, status),
-              file=sys.stderr)
-        sys.exit(1)
-
-    if (status_code is not None and
-       not pan_chainguard.util.s1_in_s2(xapi.status_code, status_code)):
-        print('%s: %s: status_code %s != %s' %
-              (func.__name__, kwargs,
-               xapi.status_code, status_code),
-              file=sys.stderr)
-        sys.exit(1)
+    if pr:
+        data = get_trusted_root_cas(xapi, xpath)
+        num = len(data)
+        print('%d Trusted Root CA Certificates' % num)
+        if num < len(pr):
+            print('Warning: %d certificates not trusted; '
+                  'run guard.py --update-trusted' % (len(pr) - num))
 
 
 def commit(xapi, panorama):
@@ -494,8 +659,12 @@ def commit(xapi, panorama):
         'sync': True,
     }
 
+    if args.dry_run:
+        return
+
     if args.verbose:
         print('commit config for admin %s' % args.admin)
+
     api_request(xapi, xapi.commit, kwargs, 'success')
     if args.debug:
         print(xapi.xml_root(), file=sys.stderr)
@@ -511,6 +680,34 @@ def commit(xapi, panorama):
     print()
 
 
+def api_request(xapi, func, kwargs, status=None, status_code=None):
+    try:
+        func(**kwargs)
+    except pan.xapi.PanXapiError as e:
+        print('%s: %s: %s' % (func.__name__, kwargs, e),
+              file=sys.stderr)
+        sys.exit(1)
+
+    status_detail = (' "%s"' % xapi.status_detail
+                     if xapi.status_detail is not None
+                     else '')
+    if (status is not None and
+       not pan_chainguard.util.s1_in_s2(xapi.status, status)):
+        print('%s: %s:%s status %s != %s' %
+              (func.__name__, kwargs, xapi.status_detail,
+               xapi.status, status),
+              file=sys.stderr)
+        sys.exit(1)
+
+    if (status_code is not None and
+       not pan_chainguard.util.s1_in_s2(xapi.status_code, status_code)):
+        print('%s: %s:%s status_code %s != %s' %
+              (func.__name__, kwargs, status_detail,
+               xapi.status_code, status_code),
+              file=sys.stderr)
+        sys.exit(1)
+
+
 def parse_args():
     def check_vsys(x):
         if x.isdigit():
@@ -521,6 +718,7 @@ def parse_args():
         usage='%(prog)s [options]',
         description='update PAN-OS trusted CAs')
     parser.add_argument('--tag', '-t',
+                        required=True,
                         help='.panrc tagname')
     parser.add_argument('--vsys',
                         type=check_vsys,
@@ -530,15 +728,16 @@ def parse_args():
     parser.add_argument('--certs',
                         metavar='PATH',
                         help='certificate archive path')
-    parser.add_argument('--add',
+    parser.add_argument('--update',
                         action='store_true',
-                        help='add intermediate certificates')
-    parser.add_argument('--add-roots',
-                        action='store_true',
-                        help='add root certificates')
+                        help='update certificates')
     parser.add_argument('--delete',
                         action='store_true',
-                        help='delete previously added certificates')
+                        help='delete all previously added certificates')
+    parser.add_argument('-T', '--type',
+                        action='append',
+                        choices=['root', 'intermediate'],
+                        help='certificate type(s) for update')
     # XXX experimental
     # We don't want to have a condition where default trusted CAs
     # are disabled but there are no replacement root CAs.  Better
@@ -551,9 +750,18 @@ def parse_args():
                         action='store_true',
                         help=argparse.SUPPRESS)
 #                        help='enable all default trusted root CAs')
+    parser.add_argument('--update-trusted',
+                        action='store_true',
+                        help='update trusted root CA for all certificates')
     parser.add_argument('--commit',
                         action='store_true',
                         help='commit configuration')
+    parser.add_argument('--dry-run',
+                        action='store_true',
+                        help="don't update PAN-OS")
+    parser.add_argument('--show',
+                        action='store_true',
+                        help='show %s managed config' % title)
     parser.add_argument('--admin',
                         help='commit admin')
     parser.add_argument('--xdebug',

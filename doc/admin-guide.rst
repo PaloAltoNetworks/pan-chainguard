@@ -127,7 +127,7 @@ It requires the following Python packages:
 
 ``pan-chainguard`` should run on any Unix system with Python 3.9 or
 greater, and OpenSSL or LibreSSL; it has been tested on OpenBSD 7.6,
-Ubuntu 22.04 and macOS 14.
+Ubuntu 22.04 and 24.04, and macOS 14.
 
 Get pan-chainguard using ``git clone``
 ......................................
@@ -145,10 +145,10 @@ Get pan-chainguard using ``git clone``
   $ cd pan-chainguard
 
   $ bin/chain.py --version
-  pan-chainguard 0.4.0
+  pan-chainguard 0.6.0
 
   $ bin/guard.py --version
-  pan-chainguard 0.4.0
+  pan-chainguard 0.6.0
 
 Install pan-chainguard using ``pip``
 ....................................
@@ -158,10 +158,10 @@ Install pan-chainguard using ``pip``
   $ python3 -m pip install pan-chainguard
 
   $ chain.py --version
-  pan-chainguard 0.4.0
+  pan-chainguard 0.6.0
 
   $ guard.py --version
-  pan-chainguard 0.4.0
+  pan-chainguard 0.6.0
 
 pan-chainguard Command Line Programs
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -565,7 +565,7 @@ to run ``sprocket.py`` you do not need to download it again.
 
    $ bin/chain.py --verbose -c tmp/AllCertificateRecordsReport.csv -r tmp/root-fingerprints.csv \
    > -i tmp/intermediate-fingerprints.csv --tree tmp/certificate-tree.json
-   1729 total intermediate certificates
+   1737 total intermediate certificates
 
 
 chainring.py
@@ -614,17 +614,18 @@ chainring.py Example
    /home/ksteves/git/pan-chainguard
 
    $ bin/chainring.py --tree tmp/certificate-tree.json --format txt > tmp/certificate-tree.txt
+
    $ head tmp/certificate-tree.txt
    Root
-   ├── 018E13F0772532CF809BD1B17281867283FC48C6E13BE9C69812854A490C1B05 Subject: DigiCert TLS ECC P384 Root G5 Issuer: DigiCert
-   │   ├── 0215DB7E22D36D0E7535A12691A9EC0DC7F43D83AB580C0709711C1E7A9B55EC Subject: Thawte G5 TLS ECC P-384 SHA384 2022 CA2 Issuer: DigiCert TLS ECC P384 Root G5
-   │   ├── 07F55A105E886D191FBD2253283E77B1FC1CCDCC9F26A3E6C7E69706A7593FEF Subject: GeoTrust EV G5 TLS CN ECC P-384 SHA384 2022 CA1 Issuer: DigiCert TLS ECC P384 Root G5
-   │   ├── 1D75A0B37B4AE11E883C97D3FF0DC5D84D93FE129C12DD78086C4A78DAF3F709 Subject: DigiCert Basic OV G5 TLS CN ECC P-384 SHA384 2022 CA1 Issuer: DigiCert TLS ECC P384 Root G5
-   │   ├── 290E698939A24F7B63AB14D0490DE92BEBEF6C1C2D3BE717F3775B71C1AB626D Subject: DigiCert Secure Site Pro EV G5 TLS CN ECC P-384 SHA384 2022 CA1 Issuer: DigiCert TLS ECC P384 Root G5
-   │   ├── 2C171064DBFA280A1F294F72E2A1FC24C86111B23723DB9375D3004B27E7B33B Subject: DigiCert G5 TLS EU ECC P-384 SHA384 2022 CA1 Issuer: DigiCert TLS ECC P384 Root G5
-   │   ├── 49C1F25A88B5B15A80C1A2DA11589111C5AD8E222104FDC49022FD6AEF1CF54D Subject: DigiCert Secure Site EV G5 TLS CN ECC P-384 SHA384 2022 CA1 Issuer: DigiCert TLS ECC P384 Root G5
-   │   ├── 66E795550B16497E7CF4566EC63B56660F28DBD551C357C526FBB0D7620A8112 Subject: GeoTrust G5 TLS ECC P-384 SHA384 2022 CA2 Issuer: DigiCert TLS ECC P384 Root G5
-   │   ├── 72F104084DB7914BD8AFE6E347B9257ED4C1D7FC71D3F1E51F3CF47B739B386A Subject: GeoTrust G5 TLS EC P-384 SHA384 2022 CA1 Issuer: DigiCert TLS ECC P384 Root G5
+   ├── 018E13F0772532CF809BD1B17281867283FC48C6E13BE9C69812854A490C1B05 Subject: "DigiCert TLS ECC P384 Root G5" CA-Owner: "DigiCert"
+   │   ├── 0215DB7E22D36D0E7535A12691A9EC0DC7F43D83AB580C0709711C1E7A9B55EC Subject: "Thawte G5 TLS ECC P-384 SHA384 2022 CA2" Issuer: "DigiCert TLS ECC P384 Root G5"
+   │   ├── 07F55A105E886D191FBD2253283E77B1FC1CCDCC9F26A3E6C7E69706A7593FEF Subject: "GeoTrust EV G5 TLS CN ECC P-384 SHA384 2022 CA1" Issuer: "DigiCert TLS ECC P384 Root G5"
+   │   ├── 1D75A0B37B4AE11E883C97D3FF0DC5D84D93FE129C12DD78086C4A78DAF3F709 Subject: "DigiCert Basic OV G5 TLS CN ECC P-384 SHA384 2022 CA1" Issuer: "DigiCert TLS ECC P384 Root G5"
+   │   ├── 290E698939A24F7B63AB14D0490DE92BEBEF6C1C2D3BE717F3775B71C1AB626D Subject: "DigiCert Secure Site Pro EV G5 TLS CN ECC P-384 SHA384 2022 CA1" Issuer: "DigiCert TLS ECC P384 Root G5"
+   │   ├── 2C171064DBFA280A1F294F72E2A1FC24C86111B23723DB9375D3004B27E7B33B Subject: "DigiCert G5 TLS EU ECC P-384 SHA384 2022 CA1" Issuer: "DigiCert TLS ECC P384 Root G5"
+   │   ├── 49C1F25A88B5B15A80C1A2DA11589111C5AD8E222104FDC49022FD6AEF1CF54D Subject: "DigiCert Secure Site EV G5 TLS CN ECC P-384 SHA384 2022 CA1" Issuer: "DigiCert TLS ECC P384 Root G5"
+   │   ├── 66E795550B16497E7CF4566EC63B56660F28DBD551C357C526FBB0D7620A8112 Subject: "GeoTrust G5 TLS ECC P-384 SHA384 2022 CA2" Issuer: "DigiCert TLS ECC P384 Root G5"
+   │   ├── 72F104084DB7914BD8AFE6E347B9257ED4C1D7FC71D3F1E51F3CF47B739B386A Subject: "GeoTrust G5 TLS EC P-384 SHA384 2022 CA1" Issuer: "DigiCert TLS ECC P384 Root G5"
 
 link.py
 ~~~~~~~
@@ -684,6 +685,9 @@ link.py Usage
 link.py Example
 ................
 
+This example performs an initial download without an old certificate
+archive.
+
 ::
 
    $ pwd
@@ -701,15 +705,22 @@ link.py Example
 
    $ bin/link.py --verbose -f tmp/root-fingerprints.csv -f tmp/intermediate-fingerprints.csv \
    > -m tmp/MozillaIntermediateCerts.csv -m tmp/PublicAllIntermediateCertsWithPEMReport.csv \
-   > --certs-old tmp/certificates-old.tgz --certs-new tmp/certificates-new.tgz 
-   certs-old: 1886
-   MozillaIntermediateCerts: 17
-   PublicAllIntermediateCerts: 0
-   crt.sh: 0
-   Total certs-new: 1903
+   > --certs-old tmp/certificates-old.tgz --certs-new tmp/certificates-new.tgz >tmp/stdout.txt 2>tmp/stderr.txt
 
    $ echo $?
    0
+
+   $ tail tmp/stdout.txt 
+   Download using crt.sh API 55903859C8C0C3EBB8759ECE4E2557225FF5758BBD38EBD48276601E1BD58097
+   Download using crt.sh API ADA5A71AF2121B569104BE385E746FA975617E81DBFAF6F722E62352471BD838
+   Download using crt.sh API E7FA0F67C9B6D886C868408996DBDFC3680E8B9EC47628EEFB4824C23A287693
+   Download using crt.sh API D793D934DD1B9FF9F6A76D438C760ED44B72BCDE660B49A77DBCF81EC7CEB3A9
+   Download using crt.sh API F7B09EEA79096A4498F6A2B8D6F1183228A3769EA988050D1B32A380EABC4F9E
+   certs-old: 0
+   MozillaIntermediateCerts: 1718
+   PublicAllIntermediateCerts: 15
+   crt.sh: 178
+   Total certs-new: 1911
 
 ``link.py`` exits with the following status codes:
 
@@ -748,6 +759,28 @@ For example:
    root/6B328085625318AA50D173C98D8BDA09D57E27413D114CF787A0F5D06C030CF6.pem
    root/5C58468D55F58E497E743982D2B50010B6D165374ACF83A7D4A32DB768C4408E.pem
 
+This example performs a subsequent download using an old certificate
+archive.
+
+::
+
+   $ pwd
+   /home/ksteves/git/pan-chainguard
+
+   $ cd tmp
+
+   $ mv certificates-new.tgz certificates-old.tgz
+
+   $ cd ..
+
+   $ bin/link.py --verbose -f tmp/root-fingerprints.csv -f tmp/intermediate-fingerprints.csv \
+   > --certs-old tmp/certificates-old.tgz --certs-new tmp/certificates-new.tgz
+   certs-old: 1911
+   MozillaIntermediateCerts: 0
+   PublicAllIntermediateCerts: 0
+   crt.sh: 0
+   Total certs-new: 1911
+
 guard.py
 ~~~~~~~~
 
@@ -762,35 +795,62 @@ guard.py Usage
    update PAN-OS trusted CAs
 
    options:
-     -h, --help           show this help message and exit
-     --tag TAG, -t TAG    .panrc tagname
-     --vsys VSYS          vsys name or number
-     --template TEMPLATE  Panorama template
-     --certs PATH         certificate archive path
-     --add                add intermediate certificates
-     --add-roots          add root certificates
-     --delete             delete previously added certificates
-     --commit             commit configuration
-     --admin ADMIN        commit admin
-     --xdebug {0,1,2,3}   pan.xapi debug
-     --verbose            enable verbosity
-     --debug {0,1,2,3}    enable debug
-     --version            display version
+     -h, --help            show this help message and exit
+     --tag TAG, -t TAG     .panrc tagname
+     --vsys VSYS           vsys name or number
+     --template TEMPLATE   Panorama template
+     --certs PATH          certificate archive path
+     --update              update certificates
+     --delete              delete all previously added certificates
+     -T {root,intermediate}, --type {root,intermediate}
+                           certificate type(s) for update
+     --update-trusted      update trusted root CA for all certificates
+     --commit              commit configuration
+     --dry-run             don't update PAN-OS
+     --show                show pan-chainguard managed config
+     --admin ADMIN         commit admin
+     --xdebug {0,1,2,3}    pan.xapi debug
+     --verbose             enable verbosity
+     --debug {0,1,2,3}     enable debug
+     --version             display version
 
 guard.py Example
 ................
 
 ``guard.py`` uses the certificate archive created by ``link.py`` to
-import the intermediate certificates, and optionally the root
-certificates, as trusted CA device certificates on PAN-OS.  The .panrc
-tagname can specify a Panorama, firewall or multi-vsys firewall.
-``--vsys`` is used to specify the vsys for multi-vsys firewalls.
-``--template`` is used to specify the Panorama template to update.
-``--delete`` is used to delete previously added certificates and when
-used with ``--add`` will perform an update of the existing
-intermediate certificates.  ``--add-roots`` is used to add root
-certificates from the archive and is used to update the default PAN-OS
-root store with a custom root store.
+import the certificates as trusted CA device certificates on PAN-OS:
+
++ ``--tag`` specifies the .panrc tagname which can be a Panorama or
+  firewall.
+
++ ``--template`` is used to specify the Panorama template to update.
+
++ ``--vsys`` is used to specify the vsys for multi VSYS firewalls and
+  multi VSYS Panorama templates.
+
++ ``--delete`` is used to delete all previously added certificates.
+
++ ``--update`` is used to perform an initial update or incremental
+  update of certificates.
+
++ ``--certs`` specifies the certificate archive for the update.
+
++ ``--type`` specifies the certificate type(s) for the update:
+
+  * root - update only root certificates; this is used to update the
+    default PAN-OS root store with a custom root store.
+
+  * root and intermediate - update root and intermediate certificates;
+    this is used to update the default PAN-OS root store with a custom
+    root store and their intermediate certificates.
+
+  * intermediate - update only intermediate certificates.
+
++ ``--dry-run`` is used to show what actions ``guard.py`` would
+  perform without updating PAN-OS.
+
++ ``--show`` is used the show the pan-chainguard managed
+  configuration.
 
 The device certificate names can have a maximum length of 31
 characters on Panorama and 63 on PAN-OS.  They are constructed in a
@@ -808,34 +868,50 @@ manage certificates it owns.  The PAN-OS certificate name pattern
 + Followed by the first 26 characters of the uppercase hexadecimal
   certificate fingerprint
 
-.. note:: Panorama support includes:
-
-	  + import to Panorama device certificates
-	  + import to Template shared device certificates
-	  + commit to Panorama
-
 .. note:: ``chainring.py --test-collisions`` can be used to test for
           collisions in PAN-OS certificate names.
+
+.. note:: Panorama support:
+
+	  + import to Panorama device certificates
+	  + import to Template single VSYS device certificates
+	  + import to Template multi VSYS device certificates
+	    (currently does not work due to PAN-257229)
+	  + commit to Panorama
 
 ::
 
    $ pwd
    /home/ksteves/git/pan-chainguard
 
-   $ bin/guard.py --tag pa-460-chainguard --admin chainguard --certs tmp/certificates-new.tgz \
-   > --delete --add --add-roots --commit
+   $ bin/guard.py -t pa-460-chainguard --show
+   0 Device Certificates
+
+   $ bin/guard.py -t pa-460-chainguard --update -T root -T intermediate \
+   > --certs tmp/certificates-new.tgz --dry-run
+   update dry-run: 0 to delete, 1911 to add
+
+   $ bin/guard.py -t pa-460-chainguard --update -T root -T intermediate \
+   > --certs tmp/certificates-new.tgz --commit
    0 certificates deleted
-   174 root certificates added
-   1729 intermediate certificates added
+   1911 certificates added
    commit: success
+
+   $ bin/guard.py -t pa-460-chainguard --update -T root -T intermediate \
+   > --certs tmp/certificates-new.tgz --dry-run
+   update dry-run: 0 to delete, 0 to add
+
+   $ bin/guard.py -t pa-460-chainguard --show
+   1911 Device Certificates
+   1911 Trusted Root CA Certificates
 
 About the Name
 --------------
 
 ``pan-chainguard`` is named after a bicycle chain guard.  This chain
-guard serves to guard and protect against missing intermediate
-certificate chains.  ``fling.py`` is named after anti-fling grease
-used on chains.
+guard serves to guard and protect against an out-of-date root store
+and missing intermediate certificate chains.  ``fling.py`` is named
+after anti-fling grease used on chains.
 
 References
 ----------
