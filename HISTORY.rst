@@ -1,6 +1,32 @@
 Release History
 ===============
 
+0.7.0 (2025-01-02)
+------------------
+
+- Major updates to guard.py:
+
+  - Allow incremental certificate updates using --update (replaces
+    --add)
+  - Allow update of only root certificates
+  - Add --dry-run to show what actions would be performed without
+    updating PAN-OS
+  - Add --show to show managed config
+  - Add --update-trusted to fix out of sync trusted root CA certificate
+    settings
+
+- chainring.py: For HTML document, create hyperlink for certificate
+  fingerprint to crt.sh.
+
+- chain.py:
+
+  For a root certificate the "Parent Certificate Name" is set to the
+  "CA Owner" field; change node tag to use CA-Owner vs Issuer.  Also
+  quote Subject, Issuer, CA-Owner.
+
+- chainring.py: Add --test-collisions to test for PAN-OS certificate
+  name collisions using the JSON certificate tree as input.
+
 0.6.0 (2024-12-15)
 ------------------
 
