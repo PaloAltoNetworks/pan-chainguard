@@ -140,7 +140,7 @@ Get pan-chainguard using ``git clone``
 
   $ python3 -m pip install treelib
 
-  $ git clone https://github.com/PaloAltoNetworks/pan-chainguard/pan-chainguard.git
+  $ git clone https://github.com/PaloAltoNetworks/pan-chainguard.git
 
   $ cd pan-chainguard
 
