@@ -44,7 +44,16 @@ def format_rst(tree):
             node_id = tree.root
 
         node = tree[node_id]
-        lines = [f'{"  " * level}* {node.tag}']
+        sha256 = str(node_id)
+        if len(sha256) == 64:
+            # XXX uncertain if we can monospace the anchor
+            lines = [
+                f'{"  " * level}* '
+                f'`{sha256} <https://crt.sh/?q={sha256}>`_ '
+                f'{node.tag[64:]}'
+            ]
+        else:
+            lines = [f'{"  " * level}* {node.tag}']
 
         for i, child in enumerate(tree.children(node_id)):
             if i == 0:
