@@ -873,11 +873,15 @@ manage certificates it owns.  The PAN-OS certificate name pattern
 
 .. note:: Panorama support:
 
-	  + import to Panorama device certificates
-	  + import to Template single VSYS device certificates
-	  + import to Template multi VSYS device certificates
-	    (currently does not work due to PAN-257229)
-	  + commit to Panorama
+	  + Import to Panorama device certificates
+	  + Import to Template single VSYS device certificates
+	  + Import to Template multi VSYS device certificates
+
+	    * Issue ID PAN-257229
+	    * Fixed in PAN-OS 12.1.0
+	    * Does not work (not fixed) in PAN-OS 10.x, 11.x
+
+          + Commit to Panorama
 
 ::
 
