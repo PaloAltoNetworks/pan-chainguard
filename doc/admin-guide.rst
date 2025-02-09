@@ -590,9 +590,9 @@ chainring.py Usage
 
    $ bin/chainring.py --help
    usage: chainring.py [options]
-   
+
    certificate tree analysis and reporting
-   
+
    options:
      -h, --help            show this help message and exit
      --tree PATH           JSON certificate tree path
@@ -667,9 +667,9 @@ link.py Usage
 
    $ bin/link.py --help
    usage: link.py [options]
-   
+
    get CA certificates
-   
+
    options:
      -h, --help            show this help message and exit
      -f PATH, --fingerprints PATH
@@ -695,7 +695,7 @@ archive.
 
    $ cd tmp
 
-   $ rm -f MozillaIntermediateCerts.csv 
+   $ rm -f MozillaIntermediateCerts.csv
    $ curl -sOJ https://ccadb.my.salesforce-sites.com/mozilla/MozillaIntermediateCertsCSVReport
 
    $ rm -f PublicAllIntermediateCertsWithPEMReport.csv
@@ -710,7 +710,7 @@ archive.
    $ echo $?
    0
 
-   $ tail tmp/stdout.txt 
+   $ tail tmp/stdout.txt
    Download using crt.sh API 55903859C8C0C3EBB8759ECE4E2557225FF5758BBD38EBD48276601E1BD58097
    Download using crt.sh API ADA5A71AF2121B569104BE385E746FA975617E81DBFAF6F722E62352471BD838
    Download using crt.sh API E7FA0F67C9B6D886C868408996DBDFC3680E8B9EC47628EEFB4824C23A287693
