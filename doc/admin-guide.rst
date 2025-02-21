@@ -33,7 +33,7 @@ and allows PAN-OS SSL decryption administrators to:
    as device certificates.
 
 Issue 1: Out-of-date Root Store
--------------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The PAN-OS root store (*Default Trusted Certificate Authorities*) is
 updated only in PAN-OS major software releases; it is not currently
@@ -49,7 +49,7 @@ identified, the certificates are obtained, and the certificates are
 imported into PAN-OS.
 
 Issue 2: Misconfigured Servers
-------------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Many TLS enabled origin servers suffer from a misconfiguration in
 which they:
@@ -68,7 +68,7 @@ the required intermediate certificates are obtained, and the
 certificates are imported into PAN-OS.
 
 Solution 1: Create Custom Root Store
-------------------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 ``pan-chainguard`` can create a custom root store, using one or more
 of the major vendor root stores, which are managed by their CA
@@ -83,7 +83,7 @@ The custom root store can then be added to PAN-OS as trusted CA device
 certificates.
 
 Solution 2: Intermediate CA Preloading
---------------------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 ``pan-chainguard`` uses a root store and the
 *All Certificate Information (root and intermediate) in CCADB (CSV)*
@@ -96,7 +96,7 @@ TLS connection errors that users encounter for misconfigured servers
 can be reduced, without reactive actions by an administrator.
 
 AIA Fetching
-~~~~~~~~~~~~
+............
 
 Another approach used is AIA fetching, or AIA chasing, which uses the
 *CA Issuers* field in the *Authority Information Access* X509v3
