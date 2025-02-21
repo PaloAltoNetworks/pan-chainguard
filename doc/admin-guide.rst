@@ -32,8 +32,8 @@ and allows PAN-OS SSL decryption administrators to:
    <https://wiki.mozilla.org/Security/CryptoEngineering/Intermediate_Preloading>`_
    as device certificates.
 
-Issue 1
--------
+Issue 1: Out-of-date Root Store
+-------------------------------
 
 The PAN-OS root store (*Default Trusted Certificate Authorities*) is
 updated only in PAN-OS major software releases; it is not currently
@@ -48,8 +48,8 @@ then see errors such as *NET::ERR_CERT_AUTHORITY_INVALID* (Chrome) or
 identified, the certificates are obtained, and the certificates are
 imported into PAN-OS.
 
-Issue 2
--------
+Issue 2: Misconfigured Servers
+------------------------------
 
 Many TLS enabled origin servers suffer from a misconfiguration in
 which they:
