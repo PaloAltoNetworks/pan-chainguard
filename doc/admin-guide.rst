@@ -909,6 +909,14 @@ manage certificates it owns.  The PAN-OS certificate name pattern
    1911 Device Certificates
    1911 Trusted Root CA Certificates
 
+pan-chainguard-content - Certificate Content for pan-chainguard
+---------------------------------------------------------------
+
+`pan-chainguard-content
+<https://github.com/PaloAltoNetworks/pan-chainguard-content>`_
+provides pre-generated, up-to-date content which can be used to
+simplify the deployment of pan-chainguard.
+
 About the Name
 --------------
 
@@ -925,6 +933,9 @@ References
 
 - `pan-chainguard GitHub Repository
   <https://github.com/PaloAltoNetworks/pan-chainguard>`_
+
+- `pan-chainguard-content GitHub Repository
+  <https://github.com/PaloAltoNetworks/pan-chainguard-content>`_
 
 - `Common CA Database - Useful Resources
   <https://www.ccadb.org/resources>`_
