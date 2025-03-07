@@ -4,7 +4,7 @@ pan-chainguard - Manage Root Store and Intermediate Certificate Chains on PAN-OS
 Overview
 --------
 
-``pan-chainguard`` is a Python3 application which uses
+``pan-chainguard`` is a Python application which uses
 `CCADB data
 <https://www.ccadb.org/resources>`_
 and allows PAN-OS SSL decryption administrators to:
