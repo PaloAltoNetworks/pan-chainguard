@@ -39,21 +39,22 @@ def format_text(tree):
 
 
 def format_rst(tree):
-    def tree_to_rst(tree, node_id=None, level=0):
+    def tree_to_rst(tree, node_id=None, level=-1):
         if node_id is None:
             node_id = tree.root
 
         node = tree[node_id]
+        lines = []
+
         sha256 = str(node_id)
+        # skips root node
         if len(sha256) == 64:
             # XXX uncertain if we can monospace the anchor
-            lines = [
+            lines.append(
                 f'{"  " * level}* '
                 f'`{sha256} <https://crt.sh/?q={sha256}>`_ '
                 f'{node.tag[64:]}'
-            ]
-        else:
-            lines = [f'{"  " * level}* {node.tag}']
+            )
 
         for i, child in enumerate(tree.children(node_id)):
             if i == 0:
@@ -77,30 +78,28 @@ def format_html(tree):
 
         node = tree[node_id]
         children = tree.children(node_id)
+        html = ''
 
         sha256 = str(node_id)
+        # skips root node
         if len(sha256) == 64:
-            html = (f'<li><a href="https://crt.sh/?q={sha256}">'
-                    f'<code>{sha256}</code></a>'
-                    f'{escape(node.tag[64:])}\n')
-        else:
-            html = f'<li>{escape(node.tag)}\n'
+            html += (f'<li><a href="https://crt.sh/?q={sha256}">'
+                     f'<code>{sha256}</code></a>'
+                     f'{escape(node.tag[64:])}</li>\n')
 
         if children:
-            html += '<ul>'
+            html += '<ul>\n'
             for child in children:
                 html += tree_to_html(tree, child.identifier)
             html += '</ul>\n'
-
-        html += '</li>\n'
 
         return html
 
     html = ''
     if args.title:
         html += f'<h1>{escape(args.title)}</h1>\n'
-    html += f'<ul>{tree_to_html(tree)}</ul>'
-    print(html)
+    html += f'{tree_to_html(tree)}'
+    print(html, end='')
 
 
 def format_json(tree):
