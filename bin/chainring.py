@@ -28,9 +28,23 @@ libpath = os.path.dirname(os.path.abspath(__file__))
 sys.path[:0] = [os.path.join(libpath, os.pardir)]
 
 from pan_chainguard import title, __version__
+from pan_chainguard.ccadb import root_status_bits_flag, root_status_bits
 import pan_chainguard.util
 
 args = None
+
+
+def root_status(node):
+    if not args.verbose or node.tag == 'Root':
+        return ''
+
+    data = node.data
+    if data['Certificate Record Type'] == 'Root Certificate':
+        bits = root_status_bits_flag(data)
+        status = root_status_bits(bits, compact=True)
+        return status
+    else:
+        return ''
 
 
 def format_text(tree):
@@ -78,6 +92,9 @@ def format_html(tree):
 
         node = tree[node_id]
         children = tree.children(node_id)
+        root_vendors = root_status(node)
+        if root_vendors:
+            root_vendors = f' vendors:{root_vendors} '
         html = ''
 
         sha256 = str(node_id)
@@ -85,6 +102,7 @@ def format_html(tree):
         if len(sha256) == 64:
             html += (f'<li><a href="https://crt.sh/?q={sha256}">'
                      f'<code>{sha256}</code></a>'
+                     f'<b>{root_vendors}</b>'
                      f'{escape(node.tag[64:])}</li>\n')
 
         if children:

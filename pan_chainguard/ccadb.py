@@ -29,6 +29,7 @@ __all__ = [
     'valid_from', 'valid_to', 'valid_from_to', 'revoked',
     'TrustBits', 'derived_trust_bits_list', 'derived_trust_bits_flag',
     'derived_trust_bits',
+    'RootStatusBits', 'root_status_bits_flag', 'root_status_bits',
 ]
 
 
@@ -56,6 +57,22 @@ TrustBitsMap = {
 }
 
 TrustBitsMap2 = {v.name: v for v in TrustBitsMap.values()}
+
+
+class RootStatusBits(Flag):
+    NONE = 0
+    MOZILLA = auto()
+    CHROME = auto()
+    APPLE = auto()
+    MICROSOFT = auto()
+
+
+RootStatusBitsMap = {
+    'Mozilla Status': RootStatusBits.MOZILLA,
+    'Apple Status': RootStatusBits.APPLE,
+    'Chrome Status': RootStatusBits.CHROME,
+    'Microsoft Status': RootStatusBits.MICROSOFT,
+}
 
 
 def _now():
@@ -124,3 +141,35 @@ def derived_trust_bits_flag(values: list[str]) -> TrustBits:
 def derived_trust_bits(row: dict[str, str]) -> TrustBits:
     x = derived_trust_bits_list(row)
     return derived_trust_bits_flag(x)
+
+
+def root_status_bits_flag(row: dict[str, str]) -> RootStatusBits:
+    root = 'Root Certificate'
+    if row['Certificate Record Type'] != root:
+        raise ValueError('certificate type not %s' % root)
+
+    bits = RootStatusBits.NONE
+    for x in RootStatusBitsMap:
+        if x in row and row[x] == 'Included':
+            bits = bits | RootStatusBitsMap[x]
+
+    return bits
+
+
+map_ = {
+    ('mozilla', 'Mz'): RootStatusBits.MOZILLA,
+    ('apple', 'Ap'): RootStatusBits.APPLE,
+    ('chrome', 'Ch'): RootStatusBits.CHROME,
+    ('microsoft', 'Ms'): RootStatusBits.MICROSOFT,
+}
+
+
+def root_status_bits(bits: RootStatusBits,
+                     compact: bool = False) -> Union[str, list]:
+    r = []
+
+    for k, v in map_.items():
+        if v in bits:
+            r.append(k[1] if compact else k[0])
+
+    return ''.join(r) if compact else r

@@ -87,3 +87,71 @@ class CcadbTest(unittest.TestCase):
         bits = derived_trust_bits(t)
         for x in TrustBitsMap.values():
             self.assertIn(x, bits)
+
+    def test_09(self):
+        row = {
+            "Certificate Record Type": "Intermediate Certificate",
+            "Mozilla Status": "Not Included",
+            "Apple Status": "Not Included",
+            "Chrome Status": "Not Included",
+            "Microsoft Status": "Not Included",
+        }
+        r = RootStatusBits.NONE
+
+        with self.assertRaises(ValueError) as e:
+            bits = root_status_bits_flag(row)
+        x = 'certificate type not Root Certificate'
+        self.assertEqual(str(e.exception), x)
+
+    def test_10(self):
+        row = {
+            "Certificate Record Type": "Root Certificate",
+            "Mozilla Status": "Not Included",
+            "Apple Status": "Not Included",
+            "Chrome Status": "Not Included",
+            "Microsoft Status": "Not Included",
+        }
+        r = RootStatusBits.NONE
+
+        bits = root_status_bits_flag(row)
+        self.assertEqual(bits, r)
+        r = root_status_bits(bits)
+        self.assertEqual(r, [])
+
+    def test_11(self):
+        row = {
+            "Certificate Record Type": "Root Certificate",
+            "Mozilla Status": "Included",
+            "Apple Status": "Included",
+            "Chrome Status": "Included",
+            "Microsoft Status": "Included",
+        }
+        r = (RootStatusBits.MOZILLA |
+             RootStatusBits.APPLE |
+             RootStatusBits.CHROME |
+             RootStatusBits.MICROSOFT)
+
+        bits = root_status_bits_flag(row)
+        self.assertEqual(bits, r)
+        r = root_status_bits(bits)
+        self.assertEqual(r, ['mozilla', 'apple', 'chrome', 'microsoft'])
+        r = root_status_bits(bits, compact=True)
+        self.assertEqual(r, 'MzApChMs')
+
+    def test_12(self):
+        row = {
+            "Certificate Record Type": "Root Certificate",
+            "Mozilla Status": "Included",
+            "Apple Status": "Included",
+            "Chrome Status": "Not Included",
+            "Microsoft Status": "Not Included",
+        }
+        r = (RootStatusBits.MOZILLA |
+             RootStatusBits.APPLE)
+
+        bits = root_status_bits_flag(row)
+        self.assertEqual(bits, r)
+        r = root_status_bits(bits)
+        self.assertEqual(r, ['mozilla', 'apple'])
+        r = root_status_bits(bits, compact=True)
+        self.assertEqual(r, 'MzAp')
