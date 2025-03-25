@@ -29,6 +29,7 @@ sys.path[:0] = [os.path.join(libpath, os.pardir)]
 
 from pan_chainguard import title, __version__
 from pan_chainguard.ccadb import (revoked, valid_from_to,
+                                  root_status_bits_flag, RootStatusBits,
                                   derived_trust_bits, TrustBits, TrustBitsMap2)
 import pan_chainguard.util
 
@@ -40,13 +41,12 @@ DEFAULT_POLICY = {
 }
 
 SOURCES_MAP = {
-    'mozilla': 'Mozilla',
-    'google': 'Google Chrome',
-    'apple': 'Apple',
-    'microsoft': 'Microsoft'
+    'mozilla': RootStatusBits.MOZILLA,
+    'chrome': RootStatusBits.CHROME,
+    'google': RootStatusBits.CHROME,  # XXX deprecated
+    'apple': RootStatusBits.APPLE,
+    'microsoft': RootStatusBits.MICROSOFT,
 }
-
-CCADB_MAP = {v: k for k, v in SOURCES_MAP.items()}
 
 args = None
 
@@ -191,6 +191,9 @@ def get_certs(certs, policy):
 def stats(certs, policy):
     sources = {}
     for x in SOURCES_MAP.keys():
+        if x == 'google':
+            # XXX deprecated
+            continue
         policy_ = {
             'sources': [x],
             'trust_bits': policy['trust_bits'],
@@ -217,18 +220,18 @@ def stats(certs, policy):
 
 
 def policy_match(policy, row):
-    def sources_match(source_cert, source_pol):
-        if not source_cert:
+    def sources_match(status_bits, source_pol):
+        if status_bits == RootStatusBits.NONE:
             return False
 
         if policy['operation'] == 'union':
             for x in source_pol:
-                if x in source_cert:
+                if SOURCES_MAP[x] in status_bits:
                     return True
             return False
         elif policy['operation'] == 'intersection':
             for x in source_pol:
-                if x not in source_cert:
+                if SOURCES_MAP[x] not in status_bits:
                     return False
             return True
         else:
@@ -246,21 +249,15 @@ def policy_match(policy, row):
     certificate_name = row['Certificate Name']
     sha256 = row['SHA-256 Fingerprint']
 
-    status_root = row['Status of Root Cert']
-    ccadb_status = status_root.split(';')
-    included = [x for x in ccadb_status if ': Included' in x]
-
-    ccadb_sources = [x.split(':')[0].strip() for x in included]
-    sources = [CCADB_MAP[x] for x in ccadb_sources if x in CCADB_MAP]
-
+    status_bits = root_status_bits_flag(row)
     trust_bits = derived_trust_bits(row)
 
     if args.debug > 1:
         print(certificate_name,
-              'sources', sources,
-              'trust-bits', trust_bits, file=sys.stderr)
+              'status_bits', status_bits,
+              'trust_bits', trust_bits, file=sys.stderr)
 
-    if (sources_match(sources, policy['sources']) and
+    if (sources_match(status_bits, policy['sources']) and
        trust_bits_match(trust_bits, policy['trust_bits'])):
         return True
 

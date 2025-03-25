@@ -77,7 +77,7 @@ certificate program:
 + `Mozilla <https://wiki.mozilla.org/CA>`_
 + `Apple <https://www.apple.com/certificateauthority/ca_program.html>`_
 + `Microsoft <https://aka.ms/RootCert>`_
-+ `Google Chrome <https://g.co/chrome/root-policy>`_
++ `Chrome <https://g.co/chrome/root-policy>`_
 
 The custom root store can then be added to PAN-OS as trusted CA device
 certificates.
@@ -327,7 +327,7 @@ program:
 + `Mozilla <https://wiki.mozilla.org/CA>`_
 + `Apple <https://www.apple.com/certificateauthority/ca_program.html>`_
 + `Microsoft <https://aka.ms/RootCert>`_
-+ `Google Chrome <https://g.co/chrome/root-policy>`_
++ `Chrome <https://g.co/chrome/root-policy>`_
 
 To use a custom root store, run the ``sprocket.py`` program as
 described below.
@@ -343,7 +343,7 @@ following policy attributes:
    + mozilla (default)
    + apple
    + microsoft
-   + google
+   + chrome
 
 #. Set operation to use when combining multiple source sets
 
@@ -372,13 +372,13 @@ The root store policy is specified as a JSON object; the default is:
    }
 
 The following example can be used to specify a root store with
-**mozilla** and **google** sources and trust bits of
+**mozilla** and **chrome** sources and trust bits of
 **SERVER_AUTHENTICATION**:
 
 ::
 
    {
-       "sources": ["mozilla", "google"],
+       "sources": ["mozilla", "chrome"],
        "operation": "union",
        "trust_bits": ["SERVER_AUTHENTICATION"]
    }
