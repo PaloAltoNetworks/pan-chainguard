@@ -6,7 +6,7 @@ flowchart TD
     panos2{{"PAN-OS NGFW, Panorama<br/>Update Device Certificates"}}
     truststore[(trust-store.tgz)]
     truststoredir[(trust-store/)]
-    trustpolicy[("policy.json<br/>[mozilla,apple,microsoft,google]")]
+    trustpolicy[("policy.json<br/>[mozilla,apple,microsoft,chrome]")]
     fling("fling.py<br/>export PAN-OS trusted CAs")
     sprocket("sprocket.py<br/>create custom root store")
     chain("chain.py<br/>determine intermediate CAs")
