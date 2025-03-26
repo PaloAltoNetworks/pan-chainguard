@@ -59,8 +59,8 @@ certificate program:
 
 + `Mozilla <https://wiki.mozilla.org/CA>`_
 + `Apple <https://www.apple.com/certificateauthority/ca_program.html>`_
++ `Chrome <https://g.co/chrome/root-policy>`_
 + `Microsoft <https://aka.ms/RootCert>`_
-+ `Google Chrome <https://g.co/chrome/root-policy>`_
 
 The custom root store can then be added to PAN-OS as trusted CA device
 certificates.
