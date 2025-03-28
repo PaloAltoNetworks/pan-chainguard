@@ -76,8 +76,8 @@ certificate program:
 
 + `Mozilla <https://wiki.mozilla.org/CA>`_
 + `Apple <https://www.apple.com/certificateauthority/ca_program.html>`_
-+ `Microsoft <https://aka.ms/RootCert>`_
 + `Chrome <https://g.co/chrome/root-policy>`_
++ `Microsoft <https://aka.ms/RootCert>`_
 
 The custom root store can then be added to PAN-OS as trusted CA device
 certificates.
@@ -236,6 +236,8 @@ A `data and process flow diagram
 illustrates the programs, execution sequence, and data inputs and
 outputs.
 
+.. _panrc:
+
 pan-chainguard PAN-OS XML API Usage
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -326,8 +328,8 @@ program:
 
 + `Mozilla <https://wiki.mozilla.org/CA>`_
 + `Apple <https://www.apple.com/certificateauthority/ca_program.html>`_
-+ `Microsoft <https://aka.ms/RootCert>`_
 + `Chrome <https://g.co/chrome/root-policy>`_
++ `Microsoft <https://aka.ms/RootCert>`_
 
 To use a custom root store, run the ``sprocket.py`` program as
 described below.
@@ -342,8 +344,8 @@ following policy attributes:
 
    + mozilla (default)
    + apple
-   + microsoft
    + chrome
+   + microsoft
 
 #. Set operation to use when combining multiple source sets
 
@@ -916,6 +918,199 @@ pan-chainguard-content - Certificate Content for pan-chainguard
 <https://github.com/PaloAltoNetworks/pan-chainguard-content>`_
 provides pre-generated, up-to-date content which can be used to
 simplify the deployment of pan-chainguard.
+
+Use Cases
+---------
+
+The use case prerequisites include:
+
++ Install `pan-chainguard <Install pan-chainguard_>`_
+
++ Set up a `.panrc <pan-chainguard PAN-OS XML API Usage_>`_ file
+
++ Configure `role based admin <Role Based Admin_>`_
+
+Use Case 1: Update Out-of-date PAN-OS Root Store - All Vendor Sources
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+A PAN-OS SSL decryption administrator wants to refresh the system root
+store (Default Trusted Certificate Authorities) on a firewall.  They
+want their updated trusted root store to contain the root certificates
+from the 4 common vendor stores:
+
++ Mozilla
++ Apple
++ Chrome
++ Microsoft
+
+This is the simplest deployment because it can directly use the
+certificate archive from ``pan-chainguard-content``, which is updated
+daily.
+
+The steps to implement this use case include:
+
+#. Download ``pan-chainguard-content`` certificate archive
+#. Run ``guard.py`` to update PAN-OS trusted CAs
+
+Download ``pan-chainguard-content`` certificate archive
+.......................................................
+
+``pan-chainguard-content`` creates an updated certificate archive
+daily using a policy of the union of all 4 common vendor root
+certificate stores, and includes intermediate certificates for the
+root certificates, which are not used for this use case.
+
+::
+
+   $ pwd
+   /home/ksteves/git/pan-chainguard/tmp
+
+   $ curl -sLO https://raw.githubusercontent.com/PaloAltoNetworks/pan-chainguard-content/main/latest-certs/certificates-new.tgz
+
+   $ ls -lh certificates-new.tgz
+   -rw-r--r--  1 ksteves  ksteves   2.0M Mar 24 11:19 certificates-new.tgz
+
+Run ``guard.py`` to update PAN-OS trusted CAs
+.............................................
+
+::
+
+   $ pwd
+   /home/ksteves/git/pan-chainguard
+
+   $ bin/guard.py -t pa-460-chainguard --show
+   0 Device Certificates
+
+   $ bin/guard.py -t pa-460-chainguard --admin chainguard --certs tmp/certificates-new.tgz --update --type root --dry-run
+   update dry-run: 0 to delete, 298 to add
+
+   $ bin/guard.py -t pa-460-chainguard --admin chainguard --certs tmp/certificates-new.tgz --update --type root
+   0 certificates deleted
+   298 certificates added
+
+   $ bin/guard.py -t pa-460-chainguard --show
+   298 Device Certificates
+   298 Trusted Root CA Certificates
+
+   $ bin/guard.py -t pa-460-chainguard --admin chainguard --commit
+   commit: success
+
+Then repeat the certificate archive download and update periodically
+to ensure the root store remains up-to-date.  These subsequent updates
+are performed incrementally, resulting in fast update times.
+
+Use Case 2: Update Out-of-date PAN-OS Root Store - Custom Vendor Sources
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+A PAN-OS SSL decryption administrator wants to refresh the system root
+store (Default Trusted Certificate Authorities) on a firewall.  They
+want their updated trusted root store to contain the root certificates
+from:
+
++ Mozilla
++ Chrome
+
+The steps to implement this use case include:
+
+#. Download *CCADB All Certificate Information* CSV file
+#. Create ``sprocket.py policy.json`` file
+#. Run ``sprocket.py`` to create *root CA fingerprints* CSV file
+#. Download ``pan-chainguard-content`` certificate archive
+#. Run ``link.py`` to create new certificate archive
+#. Run ``guard.py`` to update PAN-OS trusted CAs
+
+Download *CCADB All Certificate Information* CSV file
+.....................................................
+
+::
+
+   $ pwd
+   /home/ksteves/git/pan-chainguard/tmp
+
+   $ curl --clobber -sOJ  https://ccadb.my.salesforce-sites.com/ccadb/AllCertificateRecordsCSVFormatv2
+
+   $ ls -lh AllCertificateRecordsReport.csv
+   -rw-r--r--  1 ksteves  ksteves   8.0M Mar 24 14:11 AllCertificateRecordsReport.csv
+
+Create ``sprocket.py policy.json`` file
+.......................................
+
+::
+
+   $ pwd
+   /home/ksteves/git/pan-chainguard/tmp
+
+   $ echo '{"sources":["mozilla","chrome"]}' > policy.json
+
+Run ``sprocket.py`` to create *root CA fingerprints* CSV file
+.............................................................
+
+::
+
+   $ pwd
+   /home/ksteves/git/pan-chainguard
+
+   $ bin/sprocket.py --verbose -c tmp/AllCertificateRecordsReport.csv --policy tmp/policy.json -f tmp/root-fingerprints.csv
+   policy: {'sources': ['mozilla', 'chrome'], 'operation': 'union', 'trust_bits': []}
+   mozilla, chrome: 177 total certificates
+
+Download ``pan-chainguard-content`` certificate archive
+.......................................................
+
+``pan-chainguard-content`` creates an updated certificate archive
+daily using a policy of the union of all 4 common vendor root
+certificate stores, and includes intermediate certificates for the
+root certificates, which are not used for this use case.
+
+::
+
+   $ pwd
+   /home/ksteves/git/pan-chainguard/tmp
+
+   $ curl -so certificates-old.tgz https://raw.githubusercontent.com/PaloAltoNetworks/pan-chainguard-content/main/latest-certs/certificates-new.tgz
+
+   $ ls -lh certificates-old.tgz
+   -rw-r--r--  1 ksteves  ksteves   2.0M Mar 26 11:56 certificates-old.tgz
+
+Run ``link.py`` to create new certificate archive
+.................................................
+
+::
+
+   $ pwd
+   /home/ksteves/git/pan-chainguard
+
+   $ bin/link.py --verbose -f tmp/root-fingerprints.csv --certs-old tmp/certificates-old.tgz --certs-new tmp/certificates-new.tgz
+   certs-old: 177
+   MozillaIntermediateCerts: 0
+   PublicAllIntermediateCerts: 0
+   crt.sh: 0
+   Total certs-new: 177
+
+Run ``guard.py`` to update PAN-OS trusted CAs
+.............................................
+
+::
+
+   $ pwd
+   /home/ksteves/git/pan-chainguard
+
+   $ bin/guard.py -t pa-460-chainguard --show
+   0 Device Certificates
+
+   $ bin/guard.py -t pa-460-chainguard --certs tmp/certificates-new.tgz --update --type root --dry-run
+
+
+   $ bin/guard.py -t pa-460-chainguard --certs tmp/certificates-new.tgz --update --type root
+
+   $ bin/guard.py -t pa-460-chainguard --show
+
+   $ bin/guard.py -t pa-460-chainguard --admin chainguard --commit
+   commit: success
+
+Then repeat the certificate archive download and update periodically
+to ensure the root store remains up-to-date.  These subsequent updates
+are performed incrementally, resulting in fast update times.
 
 About the Name
 --------------
