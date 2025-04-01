@@ -432,13 +432,15 @@ downloaded before running ``sprocket.py``.
    policy: {'sources': ['mozilla'], 'operation': 'union', 'trust_bits': []}
    mozilla: 174 total certificates
 
-fling.py
-~~~~~~~~
+fling.py - Deprecated
+~~~~~~~~~~~~~~~~~~~~~
 
 ``fling.py`` is used to export the PEM encoded X.509 certificates from
 the PAN-OS Default Trusted CA store.  It is only used when you have
-chosen to use the PAN-OS native root store; it is generally recommended
-to create an up-to-date custom root store using ``sprocket.py``.
+chosen to use the PAN-OS native root store; it is recommended
+to use
+`pan-chainguard-content <pan-chainguard-content - Certificate Content for pan-chainguard_>`_
+or to create an up-to-date custom root store using ``sprocket.py``.
 
 fling.py Usage
 ..............

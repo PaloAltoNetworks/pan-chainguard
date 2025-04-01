@@ -31,7 +31,7 @@ flowchart TD
     truststore-->untar
     untar-->truststoredir
     truststoredir-->fingerprints
-    fingerprints-->rootfingerprintscsv
+    fingerprints-->|deprecated|rootfingerprintscsv
     curl-->ccadb
     ccadb-->chain
     trustpolicy-->sprocket
