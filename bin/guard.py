@@ -18,12 +18,14 @@
 
 import argparse
 import asyncio
+from collections import defaultdict
 import logging
 import os
 import pprint
 import re
 import sys
 import time
+from treelib import Node, Tree
 import xml.etree.ElementTree as etree
 
 try:
@@ -222,6 +224,8 @@ async def main_loop():
 
     if args.show:
         show(xapi, xpath)
+    if args.show_tree:
+        show_tree(xapi, xpath)
 
     # experimental
     if args.enable_trusted:
@@ -357,13 +361,15 @@ def get_certs(xapi, xpath):
         name = entry.attrib['name']
         if prog.search(name):
             subject = entry.find('./subject').text
+            subject_cn = None
             match = progcn.search(subject)
             if match:
-                subject = match.group(1)
+                subject_cn = match.group(1)
             issuer = entry.find('./issuer').text
+            issuer_cn = None
             match = progcn.search(issuer)
             if match:
-                issuer = match.group(1)
+                issuer_cn = match.group(1)
             expiry = entry.find('./expiry-epoch').text
             try:
                 if time.time() > int(expiry):
@@ -375,8 +381,13 @@ def get_certs(xapi, xpath):
                     name, expiry, e), file=sys.stderr)
 
             v = {
+                'cert-name': name,
                 'subject': subject,
+                'subject-cn': subject_cn,
+                'subject-hash': entry.find('./subject-hash').text,
                 'issuer': issuer,
+                'issuer-cn': issuer_cn,
+                'issuer-hash': entry.find('./issuer-hash').text,
                 'expired': expired,
             }
             data[name] = v
@@ -572,12 +583,10 @@ def add_cert(xapi, xpath, cert_name, content):
 
 
 def show(xapi, xpath):
-    # XXX future?
-    prefix = ' ' * 0
-
     data = get_certs(xapi, xpath)
-    pr = []
+    out = []
     num_expired = 0
+
     for x in data:
         expired = ''
         if data[x]['expired']:
@@ -590,25 +599,98 @@ def show(xapi, xpath):
         else:
             # Intermediate
             type_ = 'I'
-        m = '%s%s %s%s Subject: "%s" Issuer: "%s"' % (
-            prefix, x, type_, expired,
+        m = '%s %s%s Subject: "%s" Issuer: "%s"' % (
+            x, type_, expired,
             data[x]['subject'], data[x]['issuer'])
-        pr.append(m)
+        out.append(m)
 
     expired = ''
     if num_expired:
         expired = ' (%d expired)' % num_expired
-    print('%d Device Certificates%s' % (len(pr), expired))
-    if pr and args.verbose:
-        print('\n'.join(pr))
+    print('%d Device Certificates%s' % (len(out), expired))
+    if out and args.verbose:
+        print('\n'.join(out))
 
-    if pr:
+    if out:
         data = get_trusted_root_cas(xapi, xpath)
         num = len(data)
         print('%d Trusted Root CA Certificates' % num)
-        if num < len(pr):
+        if num < len(out):
             print('Warning: %d certificates not trusted; '
-                  'run guard.py --update-trusted' % (len(pr) - num))
+                  'run guard.py --update-trusted' % (len(out) - num))
+
+
+def show_tree(xapi, xpath):
+    data = get_certs(xapi, xpath)
+    issuers = defaultdict(list)
+    subjects = defaultdict(list)
+    roots = []
+
+    for x in data:
+        issuers[data[x]['issuer-hash']].append(data[x])
+        subjects[data[x]['subject-hash']].append(data[x])
+        if data[x]['subject-hash'] == data[x]['issuer-hash']:
+            roots.append(data[x])
+
+    orphans = []
+
+    for x in data:
+        if data[x]['issuer-hash'] not in subjects:
+            orphans.append(data[x])
+
+    if args.debug:
+        print('issuers', pprint.pformat(issuers), file=sys.stderr)
+        print('subjects', pprint.pformat(subjects), file=sys.stderr)
+        print('roots', pprint.pformat(roots), file=sys.stderr)
+        print('orphans', pprint.pformat(orphans), file=sys.stderr)
+
+    tree = Tree()
+    tree.add_node(Node(tag='Root', identifier=0))
+
+    def build_node(x):
+        subject = x['subject-cn'] if x['subject-cn'] else x['subject']
+        issuer = x['issuer-cn'] if x['issuer-cn'] else x['issuer']
+        tag = (f"{x['cert-name']} "
+               f'Subject: "{subject}" '
+               f'Issuer: "{issuer}"')
+
+        node = Node(tag=tag, identifier=x['cert-name'])
+
+        return node
+
+    def add_children(parent, issuer):
+        if issuer in issuers:
+            for x in issuers[issuer]:
+                if (tree.contains(x['cert-name']) or
+                   x['subject-hash'] == x['issuer-hash']):
+                    continue
+
+                tree.add_node(build_node(x), parent=parent)
+                add_children(x['cert-name'], x['subject-hash'])
+
+    for x in roots + orphans:
+        tree.add_node(build_node(x), parent=0)
+        add_children(x['cert-name'], x['subject-hash'])
+
+    print(tree.show(stdout=False), end='')
+
+    treelen = len(tree) - 1  # don't count root node
+    sublen = 0
+    for x in subjects:
+        sublen += len(subjects[x])
+    if treelen != sublen:
+        print('Error: tree length != number of certificates:'
+              ' %d != %d' % (treelen, sublen))
+
+    duplicates = []
+    for x in subjects:
+        if len(subjects[x]) > 1:
+            duplicates.append(subjects[x][0]['subject'])
+
+    if args.verbose and duplicates:
+        print('Info: %d duplicate certificate subjects' %
+              len(duplicates))
+        print('\n'.join(duplicates))
 
 
 def commit(xapi, panorama):
@@ -764,6 +846,10 @@ def parse_args():
     parser.add_argument('--show',
                         action='store_true',
                         help='show %s managed config' % title)
+    parser.add_argument('--show-tree',
+                        action='store_true',
+                        help='show %s managed certificates in tree format' %
+                        title)
     parser.add_argument('--admin',
                         help='commit admin')
     parser.add_argument('--xdebug',
