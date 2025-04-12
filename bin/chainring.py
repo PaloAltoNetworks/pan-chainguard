@@ -22,7 +22,6 @@ from html import escape
 import json
 import os
 import sys
-from treelib import Tree
 
 libpath = os.path.dirname(os.path.abspath(__file__))
 sys.path[:0] = [os.path.join(libpath, os.pardir)]
