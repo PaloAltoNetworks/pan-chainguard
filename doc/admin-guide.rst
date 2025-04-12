@@ -812,6 +812,7 @@ guard.py Usage
      --commit              commit configuration
      --dry-run             don't update PAN-OS
      --show                show pan-chainguard managed config
+     --show-tree           show pan-chainguard managed certificates in tree format
      --admin ADMIN         commit admin
      --xdebug {0,1,2,3}    pan.xapi debug
      --verbose             enable verbosity
