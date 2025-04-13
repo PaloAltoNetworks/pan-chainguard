@@ -1,6 +1,36 @@
 Release History
 ===============
 
+0.8.0 (2025-04-13)
+------------------
+
+- guard.py: Add --show-tree, which outputs a tree created using the
+  certificate subject-hash and issuer-hash configuration values.
+
+- fling.py is deprecated.  It is recommended to use
+  pan-chainguard-content or to create an up-to-date custom root store
+  using sprocket.py.
+
+- Add use cases to admin guide.
+
+- Deprecate "google" for "chrome" in sprocket.py policy source vendor.
+
+- chainring.py: For html format when verbose, add vendor sources for
+  root certificates.
+
+- chainring.py: Don't print Root node for format html, rst.
+
+- guard.py: Exclude cert with Signature Algorithm: rsassaPss.
+
+- Introduce the pan-chainguard-content repository which provides
+  pre-generated, up-to-date content which can be used to simplify the
+  deployment of pan-chainguard.
+
+- chainring.py: For RST document, create reference for certificate
+  fingerprint to crt.sh.
+
+- Documentation fixes and improvements.
+
 0.7.0 (2025-01-02)
 ------------------
 
