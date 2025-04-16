@@ -69,6 +69,8 @@ def read_cert_archive(*, path: str) -> dict[str, tuple[str, str]]:
     try:
         with tarfile.open(name=path, mode='r') as tar:
             for member in tar:
+                if member.name in ['root', 'intermediate']:
+                    continue
                 cert_type, sha256 = parse_name(member.name)
                 f = tar.extractfile(member)
                 content = f.read()
