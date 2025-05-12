@@ -575,17 +575,21 @@ to run ``sprocket.py`` you do not need to download it again.
 chainring.py
 ~~~~~~~~~~~~
 
-``chainring.py`` is used to create documents which describe the
-certificate hierarchy in various formats including:
+``chainring.py`` is used to:
 
-+ txt - Text
-+ rst - reStructuredText
-+ html - Hypertext Markup Language
-+ json - pretty printed JSON
++ Create documents which describe the certificate hierarchy in various
+  formats including:
 
-It is also used to test for collisions in PAN-OS certificate names,
-which are derived using the first 26 characters of the certificate
-SHA-256 fingerprint, which is 64 characters.
+  + txt - Text
+  + rst - reStructuredText
+  + html - Hypertext Markup Language
+  + json - pretty printed JSON
+
++ Test for collisions in PAN-OS certificate names, which are derived
+  using the first 26 characters of the certificate SHA-256
+  fingerprint, which is 64 characters
+
++ Lookup CCADB data by certificate SHA-256 fingerprint
 
 chainring.py Usage
 ..................
@@ -605,6 +609,8 @@ chainring.py Usage
      -t TITLE, --title TITLE
                            report title
      --test-collisions     test for certificate name collisions
+     -F SHA-256, --fingerprint SHA-256
+                           lookup CCADB data by certificate SHA-256 fingerprint
      --verbose             enable verbosity
      --debug {0,1,2,3}     enable debug
      --version             display version

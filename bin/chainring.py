@@ -21,6 +21,7 @@ import asyncio
 from html import escape
 import json
 import os
+import pprint
 import sys
 
 libpath = os.path.dirname(os.path.abspath(__file__))
@@ -153,6 +154,10 @@ async def main_loop():
         for format in args.format:
             formats[format](tree)
 
+    if args.fingerprint:
+        for x in args.fingerprint:
+            lookup(tree, x)
+
     return 0
 
 
@@ -202,6 +207,19 @@ def test_collisions(tree):
         return True
 
 
+def lookup(tree, sha256):
+    node = tree.get_node(sha256)
+
+    if node is None:
+        print('Not found: %s' % sha256, file=sys.stderr)
+        return
+
+    data = node.data
+    filtered_data = {k: v for k, v in data.items() if v != ''}
+
+    print(pprint.pformat(filtered_data))
+
+
 def parse_args():
     parser = argparse.ArgumentParser(
         usage='%(prog)s [options]',
@@ -219,6 +237,10 @@ def parse_args():
     parser.add_argument('--test-collisions',
                         action='store_true',
                         help='test for certificate name collisions')
+    parser.add_argument('-F', '--fingerprint',
+                        action='append',
+                        metavar='SHA-256',
+                        help='lookup CCADB data by certificate SHA-256 fingerprint')
     parser.add_argument('--verbose',
                         action='store_true',
                         help='enable verbosity')
