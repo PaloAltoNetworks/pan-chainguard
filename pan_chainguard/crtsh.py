@@ -17,7 +17,6 @@
 # crt.sh API interface
 
 import aiohttp
-import asyncio
 
 URL = 'https://crt.sh'
 
