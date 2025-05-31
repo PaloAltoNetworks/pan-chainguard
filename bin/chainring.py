@@ -94,7 +94,7 @@ def format_html(tree):
         children = tree.children(node_id)
         root_vendors = root_status(node)
         if root_vendors:
-            root_vendors = f' vendors:{root_vendors} '
+            root_vendors = f' <b>vendors:{root_vendors}</b> '
         html = ''
 
         sha256 = str(node_id)
@@ -102,7 +102,7 @@ def format_html(tree):
         if len(sha256) == 64:
             html += (f'<li><a href="https://crt.sh/?q={sha256}">'
                      f'<code>{sha256}</code></a>'
-                     f'<b>{root_vendors}</b>'
+                     f'{root_vendors}'
                      f'{escape(node.tag[64:])}</li>\n')
 
         if children:
