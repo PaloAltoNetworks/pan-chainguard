@@ -100,6 +100,17 @@ def format_html(tree):
         sha256 = str(node_id)
         # skips root node
         if len(sha256) == 64:
+            if node.data['Certificate Record Type'] == 'Root Certificate':
+                try:
+                    tree_to_html.roots += 1
+                except AttributeError:
+                    tree_to_html.roots = 1
+            else:
+                try:
+                    tree_to_html.intermediates += 1
+                except AttributeError:
+                    tree_to_html.intermediates = 1
+
             html += (f'<li><a href="https://crt.sh/?q={sha256}">'
                      f'<code>{sha256}</code></a>'
                      f'{root_vendors}'
@@ -117,6 +128,11 @@ def format_html(tree):
     if args.title:
         html += f'<h1>{escape(args.title)}</h1>\n'
     html += f'{tree_to_html(tree)}'
+    if args.verbose:
+        html += f'''
+Total Roots {tree_to_html.roots}, Intermediates {tree_to_html.intermediates}
+'''
+
     print(html, end='')
 
 
