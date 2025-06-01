@@ -256,7 +256,8 @@ def parse_args():
     parser.add_argument('-F', '--fingerprint',
                         action='append',
                         metavar='SHA-256',
-                        help='lookup CCADB data by certificate SHA-256 fingerprint')
+                        help='lookup CCADB data by certificate SHA-256 '
+                        'fingerprint')
     parser.add_argument('--verbose',
                         action='store_true',
                         help='enable verbosity')
