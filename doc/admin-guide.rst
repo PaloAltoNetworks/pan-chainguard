@@ -192,8 +192,8 @@ script:
   + The root CA fingerprint CSV file created by
     ``cert-fingerprints.sh`` or ``sprocket.py``
 
-  + The All Certificate Information (root and
-    intermediate) in CCADB CSV file (`AllCertificateRecordsCSVFormatv2
+  + The *All Certificate Information (root and
+    intermediate) in CCADB* CSV file (`AllCertificateRecordsCSVFormatv2
     <https://www.ccadb.org/resources>`_)
 
   and creates:
@@ -398,7 +398,7 @@ sprocket.py Usage
    options:
      -h, --help            show this help message and exit
      -c PATH, --ccadb PATH
-                           CCADB AllCertificateRecordsCSVFormatv2 CSV path
+                           CCADB all certificate information CSV path
      -f PATH, --fingerprints PATH
                            root CA fingerprints CSV path
      --policy JSON         JSON policy object path or string
@@ -545,7 +545,7 @@ chain.py Usage
    options:
      -h, --help            show this help message and exit
      -c PATH, --ccadb PATH
-                           CCADB AllCertificateRecordsCSVFormatv2 CSV path
+                           CCADB all certificate information CSV path
      -r PATH, --root-fingerprints PATH
                            root CA fingerprints CSV path
      -i PATH, --int-fingerprints PATH

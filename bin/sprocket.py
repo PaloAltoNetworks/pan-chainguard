@@ -292,7 +292,7 @@ def parse_args():
     parser.add_argument('-c', '--ccadb',
                         required=True,
                         metavar='PATH',
-                        help='CCADB AllCertificateRecordsCSVFormatv2 CSV path')
+                        help='CCADB all certificate information CSV path')
     parser.add_argument('-f', '--fingerprints',
                         metavar='PATH',
                         help='root CA fingerprints CSV path')
