@@ -605,7 +605,7 @@ chainring.py Usage
    options:
      -h, --help            show this help message and exit
      --tree PATH           JSON certificate tree path
-     -f {txt,rst,html,json}, --format {txt,rst,html,json,stats}
+     -f {txt,rst,html,json,stats}, --format {txt,rst,html,json,stats}
                            output format
      -t TITLE, --title TITLE
                            report title
