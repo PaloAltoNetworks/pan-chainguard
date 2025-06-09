@@ -27,8 +27,9 @@ _FMT = '%Y.%m.%d %z'
 
 __all__ = [
     'valid_from', 'valid_to', 'valid_from_to', 'revoked',
-    'TrustBits', 'derived_trust_bits_list', 'derived_trust_bits_flag',
-    'derived_trust_bits',
+    'TrustBits', 'trust_bits_flag',
+    'derived_trust_bits_list', 'derived_trust_bits',
+    'root_trust_bits_list', 'root_trust_bits',
     'RootStatusBits', 'root_status_bits_flag', 'root_status_bits',
 ]
 
@@ -45,7 +46,6 @@ class TrustBits(Flag):
     TIME_STAMPING = auto()
 
 
-# https://www.ccadb.org/cas/fields#formula-fields
 TrustBitsMap = {
     'Client Authentication': TrustBits.CLIENT_AUTHENTICATION,
     'Code Signing': TrustBits.CODE_SIGNING,
@@ -118,16 +118,35 @@ def revoked(row: dict[str, str]) -> Tuple[bool, Union[str, None]]:
     return False, None
 
 
-def derived_trust_bits_list(row: dict[str, str]) -> list[str]:
-    k = 'Derived Trust Bits'
-    derived_trust_bits = row[k]
-    if not derived_trust_bits:
+def _trust_bits_list(key: str, row: dict[str, str]) -> list[str]:
+    x = row[key]
+    if not x:
         return []
 
-    return derived_trust_bits.split(';')
+    return x.split(';')
 
 
-def derived_trust_bits_flag(values: list[str]) -> TrustBits:
+def derived_trust_bits_list(row: dict[str, str]) -> list[str]:
+    type_ = 'Intermediate Certificate'
+    x = row['Certificate Record Type']
+    if x != type_:
+        raise ValueError('certificate type "%s" not "%s"' % (x, type_))
+
+    key = 'Derived Trust Bits'
+    return _trust_bits_list(key, row)
+
+
+def root_trust_bits_list(row: dict[str, str]) -> list[str]:
+    type_ = 'Root Certificate'
+    x = row['Certificate Record Type']
+    if x != type_:
+        raise ValueError('certificate type "%s" not "%s"' % (x, type_))
+
+    key = 'Trust Bits for Root Cert'
+    return _trust_bits_list(key, row)
+
+
+def trust_bits_flag(values: list[str]) -> TrustBits:
     bits = TrustBits.NONE
     for x in values:
         if x in TrustBitsMap:
@@ -140,13 +159,19 @@ def derived_trust_bits_flag(values: list[str]) -> TrustBits:
 
 def derived_trust_bits(row: dict[str, str]) -> TrustBits:
     x = derived_trust_bits_list(row)
-    return derived_trust_bits_flag(x)
+    return trust_bits_flag(x)
+
+
+def root_trust_bits(row: dict[str, str]) -> TrustBits:
+    x = root_trust_bits_list(row)
+    return trust_bits_flag(x)
 
 
 def root_status_bits_flag(row: dict[str, str]) -> RootStatusBits:
-    root = 'Root Certificate'
-    if row['Certificate Record Type'] != root:
-        raise ValueError('certificate type not %s' % root)
+    type_ = 'Root Certificate'
+    x = row['Certificate Record Type']
+    if x != type_:
+        raise ValueError('certificate type "%s" not "%s"' % (x, type_))
 
     bits = RootStatusBits.NONE
     for x in RootStatusBitsMap:
