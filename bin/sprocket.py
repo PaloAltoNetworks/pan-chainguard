@@ -30,7 +30,7 @@ sys.path[:0] = [os.path.join(libpath, os.pardir)]
 from pan_chainguard import title, __version__
 from pan_chainguard.ccadb import (revoked, valid_from_to,
                                   root_status_bits_flag, RootStatusBits,
-                                  derived_trust_bits, TrustBits, TrustBitsMap2)
+                                  root_trust_bits, TrustBits, TrustBitsMap2)
 import pan_chainguard.util
 
 
@@ -250,7 +250,7 @@ def policy_match(policy, row):
     sha256 = row['SHA-256 Fingerprint']
 
     status_bits = root_status_bits_flag(row)
-    trust_bits = derived_trust_bits(row)
+    trust_bits = root_trust_bits(row)
 
     if args.debug > 1:
         print(certificate_name,

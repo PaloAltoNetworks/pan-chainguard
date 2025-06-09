@@ -352,8 +352,7 @@ following policy attributes:
    + union - set of elements which are in any (default)
    + intersection - set of elements which are in all
 
-#. `Derived Trust Bits <https://www.ccadb.org/cas/fields#formula-fields>`_
-   field from CCADB
+#. "Trust Bits for Root Cert" field from CCADB
 
    + CLIENT_AUTHENTICATION
    + CODE_SIGNING
