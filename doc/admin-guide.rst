@@ -1171,3 +1171,6 @@ References
 
 - `Mozilla OneCRL
   <https://blog.mozilla.org/security/2015/03/03/revoking-intermediate-certificates-introducing-onecrl/>`_
+
+- `Mozilla Root Store Policy
+  <https://www.mozilla.org/en-US/about/governance/policies/security-group/certs/policy/>`_
