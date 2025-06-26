@@ -30,6 +30,7 @@ sys.path[:0] = [os.path.join(libpath, os.pardir)]
 
 from pan_chainguard import title, __version__
 from pan_chainguard.ccadb import *
+from pan_chainguard.mozilla import MozillaOneCrl, MozillaError
 import pan_chainguard.util
 
 args = None
@@ -45,7 +46,15 @@ def main():
 
 
 async def main_loop():
-    certs, invalid, warning = get_certs()
+    onecrl = None
+    if args.onecrl:
+        try:
+            onecrl = MozillaOneCrl(path=args.onecrl)
+        except MozillaError as e:
+            print('MozillaOneCrl: %s' % e, file=sys.stderr)
+            sys.exit(1)
+
+    certs, invalid, warning = get_certs(onecrl)
 
     tree = get_tree(certs)
     if args.debug > 2:
@@ -65,7 +74,7 @@ async def main_loop():
     return 0
 
 
-def get_certs():
+def get_certs(onecrl):
     invalid = {}
     warning = {}
     certs = {}
@@ -112,6 +121,19 @@ def get_certs():
                         continue
 
                 if cert_type == 'Intermediate Certificate':
+                    if onecrl:
+                        r = onecrl.get(sha256=sha256)
+                        if r is not None:
+                            x = 'In OneCRL %s "%s" "%s"' % (
+                                sha256, name, r['Revocation Status'])
+                            if r['Comments']:
+                                x += ' "%s"' % (
+                                    r['Comments'].replace('\r\n', ' '))
+                            if args.debug > 1:
+                                print(x, file=sys.stderr)
+                            invalid[sha256] = x
+                            continue
+
                     if not parent_sha256:
                         x = 'Intermediate with no parent: %s' % sha256
                         if args.debug > 1:
@@ -298,7 +320,6 @@ def parse_args():
     parser = argparse.ArgumentParser(
         usage='%(prog)s [options]',
         description='determine intermediate CAs')
-    # curl -OJ \
     # https://ccadb.my.salesforce-sites.com/ccadb/AllCertificateRecordsCSVFormatv2
     parser.add_argument('-c', '--ccadb',
                         required=True,
@@ -308,6 +329,10 @@ def parse_args():
                         required=True,
                         metavar='PATH',
                         help='root CA fingerprints CSV path')
+    # https://ccadb.my.salesforce-sites.com/mozilla/IntermediateCertsInOneCRLReportCSV
+    parser.add_argument('-o', '--onecrl',
+                        metavar='PATH',
+                        help='Mozilla OneCRL CSV path')
     parser.add_argument('-i', '--int-fingerprints',
                         metavar='PATH',
                         help='intermediate CA fingerprints CSV path')

@@ -196,6 +196,10 @@ script:
     intermediate) in CCADB* CSV file (`AllCertificateRecordsCSVFormatv2
     <https://www.ccadb.org/resources>`_)
 
+  + Optional: The *Intermediate CA Certificates in OneCRL* CSV
+    file (`IntermediateCertsInOneCRL
+    <https://wiki.mozilla.org/CA/Intermediate_Certificates>`_)
+
   and creates:
 
   + A CSV file containing the fingerprints of the intermediate
@@ -547,6 +551,8 @@ chain.py Usage
                            CCADB all certificate information CSV path
      -r PATH, --root-fingerprints PATH
                            root CA fingerprints CSV path
+     -o PATH, --onecrl PATH
+                           Mozilla OneCRL CSV path
      -i PATH, --int-fingerprints PATH
                            intermediate CA fingerprints CSV path
      --tree PATH           save certificate tree as JSON to path
@@ -561,12 +567,19 @@ The CCADB ``AllCertificateRecordsCSVFormatv2`` CSV file needs to be
 downloaded before running ``chain.py``.  If you downloaded it previously
 to run ``sprocket.py`` you do not need to download it again.
 
+The Mozilla ``IntermediateCertsInOneCRL`` CSV file *should* (it is
+optional) be downloaded to allow ``chain.py`` to check if an
+intermediate certificate is in OneCRL and exclude it.
+
 ::
 
    $ pwd
    /home/ksteves/git/pan-chainguard
 
+   $ curl -sOJ  https://ccadb.my.salesforce-sites.com/mozilla/IntermediateCertsInOneCRLReportCSV
+
    $ bin/chain.py --verbose -c tmp/AllCertificateRecordsReport.csv -r tmp/root-fingerprints.csv \
+   > -o tmp/IntermediateCertsInOneCRL.csv
    > -i tmp/intermediate-fingerprints.csv --tree tmp/certificate-tree.json
    1737 total intermediate certificates
 
@@ -1155,3 +1168,6 @@ References
 
 - `Mozilla CA/Intermediate Certificates
   <https://wiki.mozilla.org/CA/Intermediate_Certificates>`_
+
+- `Mozilla OneCRL
+  <https://blog.mozilla.org/security/2015/03/03/revoking-intermediate-certificates-introducing-onecrl/>`_

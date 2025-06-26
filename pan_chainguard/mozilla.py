@@ -15,6 +15,7 @@
 #
 
 import csv
+import sys
 from typing import Optional
 
 
@@ -80,3 +81,37 @@ class MozillaCaCerts:
             pem = pem[:-1]
 
         return pem
+
+
+# https://wiki.mozilla.org/CA/Intermediate_Certificates
+#
+# The following reports list the intermediate certificates that have
+# been added to OneCRL, and their revocation status as indicated by
+# the CA in the CCADB:
+# https://ccadb.my.salesforce-sites.com/mozilla/IntermediateCertsInOneCRLReportCSV
+
+class MozillaOneCrl:
+    def __init__(self, *,
+                 path: str,
+                 debug: bool = False):
+        self.certs = {}
+
+        try:
+            with open(path, 'r', newline='') as csvfile:
+                reader = csv.DictReader(csvfile,
+                                        dialect='unix')
+                for row in reader:
+                    sha256 = row['SHA-256 Fingerprint']
+                    if sha256 in self.certs and debug:
+                        print('Duplicate in OneCRL %s' % (
+                            sha256), file=sys.stderr)
+                    self.certs[sha256] = row
+
+        except OSError as e:
+            raise MozillaError(str(e))
+
+    def get(self, *, sha256: str) -> Optional[dict[str, str]]:
+        if sha256 not in self.certs:
+            return
+
+        return self.certs[sha256]
