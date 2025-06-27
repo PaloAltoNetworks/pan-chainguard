@@ -22,6 +22,7 @@ flowchart TD
 	treedocs[("certificate documents (txt, html, rst, ...)")]
     ccadb[("AllCertificateRecordsReport.csv</br>CCADB All Certificate Information")]
     mozilla[("MozillaIntermediateCerts.csv</br>PublicAllIntermediateCertsWithPEMReport.csv</br>Intermediate CA certificates from Mozilla")]
+    onecrl[("IntermediateCertsInOneCRL.csv</br>Intermediate certificates in Mozilla OneCRL")]
     crtsh>crt.sh:443]
     oldcertificates[(certificates-old.tgz)]
     newcertificates[(certificates-new.tgz)]
@@ -34,6 +35,8 @@ flowchart TD
     fingerprints-->|deprecated|rootfingerprintscsv
     curl-->ccadb
     ccadb-->chain
+    curl-->onecrl
+    onecrl-->chain
     trustpolicy-->sprocket
     ccadb-->sprocket
     sprocket-->rootfingerprintscsv
