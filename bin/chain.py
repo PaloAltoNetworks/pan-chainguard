@@ -56,7 +56,7 @@ async def main_loop():
 
     certs, invalid, warning = get_certs(onecrl)
 
-    tree = get_tree(certs)
+    tree = get_tree(certs, invalid)
     if args.debug > 2:
         x = tree.show(stdout=False)
         print(x, file=sys.stderr, end='')
@@ -170,7 +170,7 @@ def get_certs(onecrl):
     return certs, invalid, warning
 
 
-def get_tree(certs):
+def get_tree(certs, invalid):
     nodes = {}
 
     for row in certs.values():
@@ -206,7 +206,7 @@ def get_tree(certs):
                     for x in waiting_nodes[sha256]:
                         tree.add_node(nodes[x], parent=nodes[sha256])
                     del waiting_nodes[sha256]
-            else:
+            elif parent_sha256 not in invalid:
                 # node's parent not in tree, add node to waiting list
                 waiting_nodes[parent_sha256].append(sha256)
 
