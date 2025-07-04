@@ -14,6 +14,7 @@
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 #
 
+from collections import defaultdict
 import csv
 import io
 import os
@@ -182,3 +183,39 @@ def dict_to_tree(*, data: dict) -> treelib.Tree:
             data=x['data'])
 
     return tree
+
+
+def stats_from_tree(*, tree: treelib.Tree) -> dict:
+    all_nodes = tree.all_nodes()
+    root_nodes = [node for node in all_nodes
+                  if tree.parent(node.identifier) is not None and
+                  tree.parent(node.identifier).identifier == 0]
+    roots_with_no_children = [node for node in root_nodes
+                              if not len(tree.children(node.identifier))]
+    children_counts = [len(tree.children(node.identifier))
+                       for node in all_nodes]
+    node_depths = [tree.depth(node.identifier) for node in all_nodes]
+    level_counts = defaultdict(int)
+    for x in node_depths:
+        level_counts[x] += 1
+
+    stats = {
+        'total_nodes': len(all_nodes),  # includes root node
+        'total_roots': len(root_nodes),
+        'roots_with_no_children': len(roots_with_no_children),
+        'total_intermediates': len(all_nodes) - 1 - len(root_nodes),
+        'maximum_depth': max(node_depths, default=0),
+        'average_depth':
+        sum(node_depths) / len(node_depths) if node_depths else 0,
+        'maximum_breadth': max(level_counts.values(), default=0),
+        'maximum_children': max(children_counts, default=0),
+        'average_children':
+        sum(children_counts) / len(children_counts) if children_counts else 0,
+        'nodes_with_10+_children': sum(1 for c in children_counts if c >= 10),
+        'nodes_with_50+_children': sum(1 for c in children_counts if c >= 50),
+        'nodes_with_100+_children':
+        sum(1 for c in children_counts if c >= 100),
+        'leaf_nodes': sum(1 for c in children_counts if c == 0),
+    }
+
+    return stats
