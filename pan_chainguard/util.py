@@ -185,7 +185,7 @@ def dict_to_tree(*, data: dict) -> treelib.Tree:
     return tree
 
 
-def stats_from_tree(*, tree: treelib.Tree) -> dict:
+def stats_from_tree(*, tree: treelib.Tree) -> dict[str, Union[float, int]]:
     all_nodes = tree.all_nodes()
     root_nodes = [node for node in all_nodes
                   if tree.parent(node.identifier) is not None and
