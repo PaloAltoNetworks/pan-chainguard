@@ -133,14 +133,29 @@ def format_html(tree):
 
         return html
 
+    tree_html = tree_to_html(tree)
+
     html = ''
     if args.title:
         html += f'<h1>{escape(args.title)}</h1>\n'
-    html += f'{tree_to_html(tree)}'
+
     if args.verbose:
-        html += f'''
-Total Roots {tree_to_html.roots}, Intermediates {tree_to_html.intermediates}
+        html += f'''<h2>Total Certificates</h2>
+Total Roots: {tree_to_html.roots}<br>
+Total Intermediates: {tree_to_html.intermediates}<br>
 '''
+    if args.verbose:
+        html += '<h2>Certificate Tree</h2>\n'
+    html += tree_html
+    if args.verbose:
+        stats = pan_chainguard.util.stats_from_tree(tree=tree)
+        stats_ = ''
+        for k, v in stats.items():
+            name = k.replace('_', ' ').title()
+            value = '%.4f' % v if isinstance(v, float) else '%d' % v
+            stats_ += '%s: %s<br>\n' % (name, value)
+        html += f'''<h2>Certificate Tree Statistics</h2>
+{stats_}'''
 
     print(html, end='')
 
