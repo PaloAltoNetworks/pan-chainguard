@@ -1,6 +1,53 @@
 Release History
 ===============
 
+0.9.0 (2025-07-10)
+------------------
+
+- chainring.py: Enhance verbose html format.
+
+  Add section headings, move certificate totals to the top, and add
+  certificate tree statistics to the bottom.
+
+- chainring.py: Move certificate tree statistics generation to
+  pan_chainguard.util.stats_from_tree().
+
+- chain.py: Don't add node to waiting nodes when parent is invalid.
+
+  No functional change, reduces size of "Warning: nodes with no parent"
+  debug log.
+
+- Support Mozilla OneCRL for intermediate certificate exclusion.
+
+  To use download:
+  https://ccadb.my.salesforce-sites.com/mozilla/IntermediateCertsInOneCRLReportCSV
+  and specify the path using the chain.py --onecrl option.
+
+- sprocket.py: Fix bug in trust_bits usage for root certificates.
+
+  This was using the AllCertificateRecordsCSVFormatv2 "Derived Trust
+  Bits" field which only applies to intermediate certificates.  The
+  "Trust Bits for Root Cert" field was recently added which provides
+  trust bits for root certificates, and that is now utilised.
+
+- ccadb.py: Add support for AllCertificateRecordsCSVFormatv2 "Trust
+  Bits for Root Cert".
+
+- chainring.py: Add format stats with preliminary data from the
+  certificate tree.
+
+- chainring.py: For html display totals when verbose.
+
+- chainring.py: Only use bold tag when there are vendors.
+
+- chainring.py: Add option to lookup CCADB data by certificate SHA-256
+  fingerprint.
+
+- util.py: Allow root and intermediate directory members in the
+  certificates tar file.  The Python tarfile module doesn't add these
+  but command-line tar command does and we may want to post-process
+  the Python tar file.
+
 0.8.0 (2025-04-13)
 ------------------
 
