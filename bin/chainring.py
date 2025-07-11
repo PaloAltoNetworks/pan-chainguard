@@ -141,9 +141,9 @@ def format_html(tree):
         html += f'<h1>{escape(args.title)}</h1>\n'
 
     if args.verbose:
-        html += f'''<h2>Total Certificates</h2>
-Total Roots: {tree_to_html.roots}<br>
-Total Intermediates: {tree_to_html.intermediates}<br>
+        html += f'''<h2>Certificate Totals</h2>
+Root Certificates: {tree_to_html.roots}<br>
+Intermediate Certificates: {tree_to_html.intermediates}<br>
 '''
     if args.verbose:
         html += '<h2>Certificate Tree</h2>\n'
