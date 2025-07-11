@@ -18,6 +18,7 @@
 
 import argparse
 import asyncio
+from datetime import datetime, timezone
 from html import escape
 import json
 import os
@@ -156,6 +157,13 @@ Total Intermediates: {tree_to_html.intermediates}<br>
             stats_ += '%s: %s<br>\n' % (name, value)
         html += f'''<h2>Certificate Tree Statistics</h2>
 {stats_}'''
+
+        now_utc = datetime.now(timezone.utc)
+        date_str = now_utc.strftime('%Y-%m-%d %H:%M:%S UTC')
+        html += f'''<footer>
+<p><em>Generated: {date_str}</em></p>
+</footer>
+'''
 
     print(html, end='')
 
