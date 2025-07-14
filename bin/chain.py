@@ -142,8 +142,7 @@ def get_certs(onecrl):
                         continue
 
                     trust_bits = derived_trust_bits(row)
-                    if (trust_bits != TrustBits.NONE and
-                       TrustBits.SERVER_AUTHENTICATION not in trust_bits):
+                    if TrustBits.SERVER_AUTHENTICATION not in trust_bits:
                         x = 'Missing %s in %s %s' % (
                             TrustBits.SERVER_AUTHENTICATION.name,
                             trust_bits, sha256)
