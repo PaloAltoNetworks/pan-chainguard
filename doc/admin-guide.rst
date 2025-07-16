@@ -1122,7 +1122,6 @@ Run ``guard.py`` to update PAN-OS trusted CAs
 
    $ bin/guard.py -t pa-460-chainguard --certs tmp/certificates-new.tgz --update --type root --dry-run
 
-
    $ bin/guard.py -t pa-460-chainguard --certs tmp/certificates-new.tgz --update --type root
 
    $ bin/guard.py -t pa-460-chainguard --show
