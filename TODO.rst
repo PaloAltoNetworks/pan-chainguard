@@ -1,6 +1,10 @@
 pan-chainguard To Do List
 =========================
 
+- Verify pan-chainguard derived root store with each vendor list.
+  For Mozilla also verify pan-chainguard intermediates with
+  preloaded list.
+
 - Update admin guide with use cases (e.g., update root store
   only).
 
