@@ -5,6 +5,8 @@ pan-chainguard To Do List
   For Mozilla also verify pan-chainguard intermediates with
   preloaded list.
 
+- Integrate with SCM API (e.g., SCM capable guard.py).
+
 - Update admin guide with use cases (e.g., update root store
   only).
 
