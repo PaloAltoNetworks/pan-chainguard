@@ -193,7 +193,7 @@ script:
     ``cert-fingerprints.sh`` or ``sprocket.py``
 
   + The *All Certificate Information (root and
-    intermediate) in CCADB* CSV file (`AllCertificateRecordsCSVFormatv2
+    intermediate) in CCADB* CSV file (`AllCertificateRecordsCSVFormatv3
     <https://www.ccadb.org/resources>`_)
 
   + Optional: The *Intermediate CA Certificates in OneCRL* CSV
@@ -413,7 +413,7 @@ sprocket.py Usage
 sprocket.py Example
 ...................
 
-The CCADB ``AllCertificateRecordsCSVFormatv2`` CSV file needs to be
+The CCADB ``AllCertificateRecordsCSVFormatv3`` CSV file needs to be
 downloaded before running ``sprocket.py``.
 
 ::
@@ -423,7 +423,7 @@ downloaded before running ``sprocket.py``.
 
    $ cd tmp
 
-   $ curl -sOJ  https://ccadb.my.salesforce-sites.com/ccadb/AllCertificateRecordsCSVFormatv2
+   $ curl -sOJ  https://ccadb.my.salesforce-sites.com/ccadb/AllCertificateRecordsCSVFormatv3
 
    $ ls -lh AllCertificateRecordsReport.csv
    -rw-r--r--  1 ksteves  ksteves   7.9M Dec 10 11:56 AllCertificateRecordsReport.csv
@@ -563,7 +563,7 @@ chain.py Usage
 chain.py Example
 ................
 
-The CCADB ``AllCertificateRecordsCSVFormatv2`` CSV file needs to be
+The CCADB ``AllCertificateRecordsCSVFormatv3`` CSV file needs to be
 downloaded before running ``chain.py``.  If you downloaded it previously
 to run ``sprocket.py`` you do not need to download it again.
 
@@ -1049,7 +1049,7 @@ Download *CCADB All Certificate Information* CSV file
    $ pwd
    /home/ksteves/git/pan-chainguard/tmp
 
-   $ curl --clobber -sOJ  https://ccadb.my.salesforce-sites.com/ccadb/AllCertificateRecordsCSVFormatv2
+   $ curl --clobber -sOJ  https://ccadb.my.salesforce-sites.com/ccadb/AllCertificateRecordsCSVFormatv3
 
    $ ls -lh AllCertificateRecordsReport.csv
    -rw-r--r--  1 ksteves  ksteves   8.0M Mar 24 14:11 AllCertificateRecordsReport.csv
