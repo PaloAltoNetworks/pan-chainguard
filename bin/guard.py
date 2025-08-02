@@ -275,6 +275,17 @@ def exclude_cert(sha256):
     return False
 
 
+def show_disabled_trusted(xapi, xpath):
+    kwargs = {'xpath': xpath.root_ca_exclude_list()}
+    api_request(xapi, xapi.get, kwargs, 'success', ['7', '19'])
+    disabled = xapi.element_root.findall(
+        './result/root-ca-exclude-list/member')
+
+    if len(disabled):
+        print('Warning: %d Default Trusted CAs are disabled; '
+              'to enable run guard.py --enable-trusted' % len(disabled))
+
+
 def enable_trusted(xapi, xpath):
     kwargs = {'xpath': xpath.root_ca_exclude_list()}
     api_request(xapi, xapi.get, kwargs, 'success', ['7', '19'])
@@ -618,6 +629,8 @@ def show(xapi, xpath):
         if num < len(out):
             print('Warning: %d certificates not trusted; '
                   'run guard.py --update-trusted' % (len(out) - num))
+
+    show_disabled_trusted(xapi, xpath)
 
 
 def show_tree(xapi, xpath):
