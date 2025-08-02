@@ -20,8 +20,8 @@ Issue 1: Out-of-date Root Store
 
 The PAN-OS root store (*Default Trusted Certificate Authorities*) is
 updated only in PAN-OS major software releases; it is not currently
-managed by content updates.  The root store for PAN-OS 10.x.x releases
-is now over 4 years old.
+managed by content updates.  The root store for PAN-OS 10.x releases
+is now over 5 years old.
 
 The impact for PAN-OS SSL decryption administrators is when the root
 CA for the server certificate is not trusted, the firewall will
