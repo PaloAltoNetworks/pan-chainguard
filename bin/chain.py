@@ -106,11 +106,34 @@ def get_certs(onecrl):
                     invalid[sha256] = x
                     continue
 
+                # For duplicate certificate fingerprints in CCADB,
+                # retain a root certificate, or intermediate when no
+                # root.
                 if sha256 in certs:
                     if sha256 not in duplicates:
                         duplicates[sha256].append(certs[sha256])
                     duplicates[sha256].append(row)
-                    continue
+
+                    if (certs[sha256]['Certificate Record Type'] ==
+                       'Root Certificate'):
+                        if args.debug > 1:
+                            print('Retain duplicate %s %s' % (
+                                  certs[sha256]['Certificate Record Type'],
+                                  sha256), file=sys.stderr)
+                        continue
+                    elif cert_type == 'Root Certificate':
+                        if args.debug > 1:
+                            print('Replace duplicate %s'
+                                  ' with %s %s' % (
+                                      certs[sha256]['Certificate Record Type'],
+                                      cert_type, sha256), file=sys.stderr)
+                    else:
+                        if args.debug > 1:
+                            print('Skip duplicate %s, retain %s %s' % (
+                                cert_type,
+                                certs[sha256]['Certificate Record Type'],
+                                sha256), file=sys.stderr)
+                        continue
 
                 if cert_type == 'Root Certificate':
                     if parent_sha256:
