@@ -30,7 +30,8 @@ sys.path[:0] = [os.path.join(libpath, os.pardir)]
 from pan_chainguard import title, __version__
 from pan_chainguard.ccadb import (revoked, valid_from_to,
                                   root_status_bits_flag, RootStatusBits,
-                                  root_trust_bits, TrustBits, TrustBitsMap2)
+                                  root_trust_bits, TrustBits, TrustBitsMap2,
+                                  CcadbRootTrustSettings, CcadbError)
 import pan_chainguard.util
 
 
@@ -62,6 +63,7 @@ def main():
 
 async def main_loop():
     certs = read_certs()
+    root_trust_settings = get_trust_settings()
     policy = get_policy()
 
     if args.debug > 1:
@@ -72,10 +74,10 @@ async def main_loop():
         print('policy:', policy)
 
     if args.stats:
-        stats(certs, policy)
+        stats(certs, root_trust_settings, policy)
         return
 
-    policy_certs = get_certs(certs, policy)
+    policy_certs = get_certs(certs, root_trust_settings, policy)
 
     if args.verbose:
         print("%s: %d total certificates" % (
@@ -120,6 +122,20 @@ def read_certs():
         sys.exit(1)
 
     return certs
+
+
+def get_trust_settings():
+    if not args.trust_settings:
+        return
+
+    try:
+        settings = CcadbRootTrustSettings(path=args.trust_settings,
+                                          debug=True if args.debug else False)
+    except CcadbError as e:
+        print('CcadbRootTrustSettings: %s' % e, file=sys.stderr)
+        sys.exit(1)
+
+    return settings
 
 
 def get_policy():
@@ -176,19 +192,19 @@ def get_policy():
     return x
 
 
-def get_certs(certs, policy):
+def get_certs(certs, root_trust_settings, policy):
     certs_ = []
 
     for row in certs.values():
         sha256 = row['SHA-256 Fingerprint']
 
-        if policy_match(policy, row):
+        if policy_match(policy, root_trust_settings, row):
             certs_.append(sha256)
 
     return certs_
 
 
-def stats(certs, policy):
+def stats(certs, root_trust_settings, policy):
     sources = {}
     for x in SOURCES_MAP.keys():
         if x == 'google':
@@ -199,7 +215,7 @@ def stats(certs, policy):
             'trust_bits': policy['trust_bits'],
             'operation': policy['operation'],
         }
-        source_certs = get_certs(certs, policy_)
+        source_certs = get_certs(certs, root_trust_settings, policy_)
 
         sources[x] = set(source_certs)
 
@@ -219,7 +235,7 @@ def stats(certs, policy):
         x, len(union)))
 
 
-def policy_match(policy, row):
+def policy_match(policy, root_trust_settings, row):
     def sources_match(status_bits, source_pol):
         if status_bits == RootStatusBits.NONE:
             return False
@@ -246,6 +262,58 @@ def policy_match(policy, row):
                 return False
         return True
 
+    def chrome_trust_bits_match(source_pol, sha256):
+        if ('chrome' not in source_pol or
+           not root_trust_settings):
+            return True
+
+        bits = root_trust_settings.chrome_trust_bits(
+            sha256=sha256)
+
+        if TrustBits.SERVER_AUTHENTICATION in bits:
+            return True
+
+        return False
+
+    def mozilla_trust_bits_match(source_pol, sha256):
+        if ('mozilla' not in source_pol or
+           not root_trust_settings):
+            return True
+
+        bits = root_trust_settings.mozilla_trust_bits(
+            sha256=sha256)
+
+        if TrustBits.SERVER_AUTHENTICATION in bits:
+            return True
+
+        return False
+
+    def microsoft_trust_bits_match(source_pol, sha256):
+        if ('microsoft' not in source_pol or
+           not root_trust_settings):
+            return True
+
+        bits = root_trust_settings.microsoft_trust_bits(
+            sha256=sha256)
+
+        if TrustBits.SERVER_AUTHENTICATION in bits:
+            return True
+
+        return False
+
+    def apple_trust_bits_match(source_pol, sha256):
+        if ('apple' not in source_pol or
+           not root_trust_settings):
+            return True
+
+        bits = root_trust_settings.apple_trust_bits(
+            sha256=sha256)
+
+        if TrustBits.SERVER_AUTHENTICATION in bits:
+            return True
+
+        return False
+
     certificate_name = row['Certificate Name']
     sha256 = row['SHA-256 Fingerprint']
 
@@ -258,7 +326,11 @@ def policy_match(policy, row):
               'trust_bits', trust_bits, file=sys.stderr)
 
     if (sources_match(status_bits, policy['sources']) and
-       trust_bits_match(trust_bits, policy['trust_bits'])):
+       trust_bits_match(trust_bits, policy['trust_bits']) and
+       chrome_trust_bits_match(policy['sources'], sha256) and
+       mozilla_trust_bits_match(policy['sources'], sha256) and
+       microsoft_trust_bits_match(policy['sources'], sha256) and
+       apple_trust_bits_match(policy['sources'], sha256)):
         return True
 
     if args.debug > 1:
@@ -295,6 +367,11 @@ def parse_args():
     parser.add_argument('-f', '--fingerprints',
                         metavar='PATH',
                         help='root CA fingerprints CSV path')
+    # https://ccadb.my.salesforce-sites.com/ccadb/AllIncludedRootCertsCSV
+    parser.add_argument('-T', '--trust-settings',
+                        metavar='PATH',
+                        help='CCADB root certificate trust bit settings'
+                        ' CSV path')
     parser.add_argument('--policy',
                         metavar='JSON',
                         help='JSON policy object path or string')

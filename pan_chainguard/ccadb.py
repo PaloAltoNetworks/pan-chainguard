@@ -14,14 +14,25 @@
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 #
 
+# https://www.ccadb.org/resources
+#
 # All Certificate Information (root and intermediate) in CCADB (CSV)
 # utility functions.
-# https://www.ccadb.org/resources
 # https://ccadb.my.salesforce-sites.com/ccadb/AllCertificateRecordsCSVFormatv2
+#
+# All Included Root Certificate Trust Bit Settings:
+# https://ccadb.my.salesforce-sites.com/ccadb/AllIncludedRootCertsCSV
 
+import csv
 from datetime import datetime, timezone
 from enum import Flag, auto
-from typing import Tuple, Union
+import sys
+from typing import Tuple, Union, Optional
+
+
+class CcadbError(Exception):
+    pass
+
 
 _FMT = '%Y.%m.%d %z'
 
@@ -198,3 +209,156 @@ def root_status_bits(bits: RootStatusBits,
             r.append(k[1] if compact else k[0])
 
     return ''.join(r) if compact else r
+
+
+class CcadbRootTrustSettings:
+    def __init__(self, *,
+                 path: str,
+                 debug: bool = False):
+        self._certs = {}
+        self._debug = debug
+
+        try:
+            with open(path, 'r', newline='') as csvfile:
+                reader = csv.DictReader(csvfile,
+                                        dialect='unix')
+                for row in reader:
+                    sha256 = row['SHA-256 Fingerprint']
+                    if self._debug and sha256 in self.certs:
+                        print('Duplicate in CCADB Root Trust Settings %s' % (
+                            sha256), file=sys.stderr)
+                    self._certs[sha256] = row
+
+        except OSError as e:
+            raise CcadbError(str(e))
+
+    @property
+    def certs(self):
+        return self._certs
+
+    def get(self, *, sha256: str) -> Optional[dict[str, str]]:
+        if sha256 not in self._certs:
+            return
+
+        return self._certs[sha256]
+
+    def root_status_bits_flag(self, *, sha256: str) -> Optional[
+            RootStatusBits]:
+        if sha256 not in self._certs:
+            return
+        row = self._certs[sha256]
+
+        bits_map = RootStatusBitsMap.copy()
+        del bits_map['Chrome Status']
+        bits_map['Google Chrome Status'] = RootStatusBits.CHROME
+
+        bits = RootStatusBits.NONE
+        for x in bits_map:
+            if x in row and row[x] == 'Included':
+                bits = bits | bits_map[x]
+
+        return bits
+
+    # There is no 'Google Chrome Trust Bits'.
+    # The Chrome Root Store only trusts Server Authentication.
+    def chrome_trust_bits_list(self, *, sha256: str) -> Optional[list]:
+        if sha256 not in self._certs:
+            return
+
+        return ['Server Authentication']
+
+    def chrome_trust_bits(self, *, sha256: str) -> Optional[TrustBits]:
+        if sha256 not in self._certs:
+            return
+
+        return TrustBits.SERVER_AUTHENTICATION
+
+    def mozilla_trust_bits_list(self, *, sha256: str) -> Optional[list]:
+        if sha256 not in self._certs:
+            return
+
+        return _trust_bits_list('Mozilla Trust Bits', self._certs[sha256])
+
+    def mozilla_trust_bits(self, *, sha256: str) -> Optional[TrustBits]:
+        values = self.mozilla_trust_bits_list(sha256=sha256)
+        if values is None:
+            return
+
+        if self._debug and not values:
+            print('Mozilla Trust Bits null %s' % sha256, file=sys.stderr)
+
+        if values == ['All Trust Bits Turned Off']:
+            return TrustBits.NONE
+
+        MAP = {
+            'Websites': TrustBits.SERVER_AUTHENTICATION,
+            'Email': TrustBits.SECURE_EMAIL,
+        }
+
+        bits = TrustBits.NONE
+        for x in values:
+            if x in MAP:
+                bits = bits | MAP[x]
+            else:
+                bits = bits | TrustBits.OTHER
+
+        if self._debug and TrustBits.OTHER in bits:
+            print('Mozilla Trust Bits other %s %s' % (
+                sha256, values), file=sys.stderr)
+
+        return bits
+
+    def apple_trust_bits_list(self, *, sha256: str) -> Optional[list]:
+        if sha256 not in self._certs:
+            return
+
+        return _trust_bits_list('Apple Trust Bits', self._certs[sha256])
+
+    def apple_trust_bits(self, *, sha256: str) -> Optional[TrustBits]:
+        values = self.apple_trust_bits_list(sha256=sha256)
+        if values is None:
+            return
+
+        if self._debug and not values:
+            print('Apple Trust Bits null %s' % sha256, file=sys.stderr)
+
+        MAP = {
+            'serverAuth': TrustBits.SERVER_AUTHENTICATION,
+            'clientAuth': TrustBits.CLIENT_AUTHENTICATION,
+            'emailProtection': TrustBits.SECURE_EMAIL,
+            'timeStamping': TrustBits.TIME_STAMPING,
+            'codeSigning': TrustBits.CODE_SIGNING,
+            #  'BrandIndicatorforMessageIdentification': TrustBits.OTHER,
+        }
+
+        bits = TrustBits.NONE
+        for x in values:
+            if x in MAP:
+                bits = bits | MAP[x]
+            else:
+                bits = bits | TrustBits.OTHER
+
+        if self._debug and TrustBits.OTHER in bits:
+            print('Apple Trust Bits other %s %s' % (
+                sha256, values), file=sys.stderr)
+
+        return bits
+
+    def microsoft_trust_bits_list(self, *, sha256: str) -> Optional[list]:
+        if sha256 not in self._certs:
+            return
+
+        # DTBs - Derived Trust Bits
+        return _trust_bits_list('Microsoft EKUs', self._certs[sha256])
+
+    def microsoft_trust_bits(self, *, sha256: str) -> Optional[TrustBits]:
+        values = self.microsoft_trust_bits_list(sha256=sha256)
+        if values is None:
+            return
+
+        if self._debug and not values:
+            print('Microsoft Trust Bits null %s' % sha256, file=sys.stderr)
+
+        bits = trust_bits_flag(values)
+
+        return bits
