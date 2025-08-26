@@ -265,11 +265,19 @@ class CcadbRootTrustSettings:
         if sha256 not in self._certs:
             return
 
+        bits = self.root_status_bits_flag(sha256=sha256)
+        if RootStatusBits.CHROME not in bits:
+            return []
+
         return ['Server Authentication']
 
     def chrome_trust_bits(self, *, sha256: str) -> Optional[TrustBits]:
-        if sha256 not in self._certs:
+        values = self.chrome_trust_bits_list(sha256=sha256)
+        if values is None:
             return
+
+        if not values:
+            return TrustBits.NONE
 
         return TrustBits.SERVER_AUTHENTICATION
 
