@@ -77,7 +77,7 @@ async def main_loop():
         stats(certs, root_trust_settings, policy)
         return
 
-    policy_certs = get_certs(certs, root_trust_settings, policy)
+    policy_certs = get_root_certs(certs, root_trust_settings, policy)
 
     if args.verbose:
         print("%s: %d total certificates" % (
@@ -204,7 +204,7 @@ def get_certs(certs, root_trust_settings, policy):
     return certs_
 
 
-def stats(certs, root_trust_settings, policy):
+def get_all_sources(certs, root_trust_settings, policy):
     sources = {}
     for x in SOURCES_MAP.keys():
         if x == 'google':
@@ -216,15 +216,20 @@ def stats(certs, root_trust_settings, policy):
             'operation': policy['operation'],
         }
         source_certs = get_certs(certs, root_trust_settings, policy_)
+        sources[x] = source_certs
 
-        sources[x] = set(source_certs)
+    return sources
+
+
+def stats(certs, root_trust_settings, policy):
+    sources = get_all_sources(certs, root_trust_settings, policy)
 
     sets = []
     for x in sources.keys():
         print("%s: %d total certificates" % (x, len(sources[x])))
         sets.append(set(sources[x]))
 
-    x = ', '.join(SOURCES_MAP.keys())
+    x = ', '.join(sources.keys())
 
     intersection = set.intersection(*sets)
     print('%s: %d total certificates in all (intersection)' % (
@@ -235,23 +240,29 @@ def stats(certs, root_trust_settings, policy):
         x, len(union)))
 
 
-def policy_match(policy, root_trust_settings, row):
-    def sources_match(status_bits, source_pol):
-        if status_bits == RootStatusBits.NONE:
-            return False
+def get_root_certs(certs, root_trust_settings, policy):
+    sources = get_all_sources(certs, root_trust_settings, policy)
 
-        if policy['operation'] == 'union':
-            for x in source_pol:
-                if SOURCES_MAP[x] in status_bits:
-                    return True
-            return False
-        elif policy['operation'] == 'intersection':
-            for x in source_pol:
-                if SOURCES_MAP[x] not in status_bits:
-                    return False
+    sets = []
+    for x in policy['sources']:
+        k = 'chrome' if x == 'google' else x  # XXX deprecated
+        sets.append(set(sources[k]))
+
+    if policy['operation'] == 'union':
+        result = set.union(*sets)
+    elif policy['operation'] == 'intersection':
+        result = set.intersection(*sets)
+    else:
+        assert False, 'Invalid operation: %s' % policy['operation']
+
+    return result
+
+
+def policy_match(policy, root_trust_settings, row):
+    def sources_match(status_bits, source):
+        if SOURCES_MAP[source] in status_bits:
             return True
-        else:
-            assert False, 'Invalid operation: %s' % policy['operation']
+        return False
 
     def trust_bits_match(bits_cert, bits_pol):
         if bits_cert == TrustBits.NONE:
@@ -261,58 +272,6 @@ def policy_match(policy, root_trust_settings, row):
             if TrustBitsMap2[x] not in bits_cert:
                 return False
         return True
-
-    def chrome_trust_bits_match(source_pol, sha256):
-        if ('chrome' not in source_pol or
-           not root_trust_settings):
-            return True
-
-        bits = root_trust_settings.chrome_trust_bits(
-            sha256=sha256)
-
-        if TrustBits.SERVER_AUTHENTICATION in bits:
-            return True
-
-        return False
-
-    def mozilla_trust_bits_match(source_pol, sha256):
-        if ('mozilla' not in source_pol or
-           not root_trust_settings):
-            return True
-
-        bits = root_trust_settings.mozilla_trust_bits(
-            sha256=sha256)
-
-        if TrustBits.SERVER_AUTHENTICATION in bits:
-            return True
-
-        return False
-
-    def microsoft_trust_bits_match(source_pol, sha256):
-        if ('microsoft' not in source_pol or
-           not root_trust_settings):
-            return True
-
-        bits = root_trust_settings.microsoft_trust_bits(
-            sha256=sha256)
-
-        if TrustBits.SERVER_AUTHENTICATION in bits:
-            return True
-
-        return False
-
-    def apple_trust_bits_match(source_pol, sha256):
-        if ('apple' not in source_pol or
-           not root_trust_settings):
-            return True
-
-        bits = root_trust_settings.apple_trust_bits(
-            sha256=sha256)
-
-        if TrustBits.SERVER_AUTHENTICATION in bits:
-            return True
-
-        return False
 
     certificate_name = row['Certificate Name']
     sha256 = row['SHA-256 Fingerprint']
@@ -325,13 +284,33 @@ def policy_match(policy, root_trust_settings, row):
               'status_bits', status_bits,
               'trust_bits', trust_bits, file=sys.stderr)
 
-    if (sources_match(status_bits, policy['sources']) and
-       trust_bits_match(trust_bits, policy['trust_bits']) and
-       chrome_trust_bits_match(policy['sources'], sha256) and
-       mozilla_trust_bits_match(policy['sources'], sha256) and
-       microsoft_trust_bits_match(policy['sources'], sha256) and
-       apple_trust_bits_match(policy['sources'], sha256)):
-        return True
+    assert len(policy["sources"]) == 1, (
+        f"Must be single source: {policy['sources']}"
+    )
+
+    if (sources_match(status_bits, policy['sources'][0]) and
+       trust_bits_match(trust_bits, policy['trust_bits'])):
+        if root_trust_settings:
+            MAP = {
+                'mozilla': root_trust_settings.mozilla_trust_bits,
+                'chrome': root_trust_settings.chrome_trust_bits,
+                'apple': root_trust_settings.apple_trust_bits,
+                'microsoft': root_trust_settings.microsoft_trust_bits,
+            }
+
+            if args.debug:
+                status_bits2 = root_trust_settings.root_status_bits_flag(
+                    sha256=sha256)
+                if status_bits2 != status_bits:
+                    print(f'AllCertificateRecords {status_bits} != '
+                          f'AllIncludedRootCerts {status_bits2} {sha256}',
+                          file=sys.stderr)
+
+            bits = MAP[policy['sources'][0]](sha256=sha256)
+            if TrustBits.SERVER_AUTHENTICATION in bits:
+                return True
+        else:
+            return True
 
     if args.debug > 1:
         print('no match', certificate_name, sha256, file=sys.stderr)
