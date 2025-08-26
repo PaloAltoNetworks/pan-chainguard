@@ -312,7 +312,7 @@ class CcadbRootTrustSettings:
 
         if self._debug and TrustBits.OTHER in bits:
             print('Mozilla Trust Bits other %s %s' % (
-                sha256, values), file=sys.stderr)
+                values, sha256), file=sys.stderr)
 
         return bits
 
@@ -348,7 +348,7 @@ class CcadbRootTrustSettings:
 
         if self._debug and TrustBits.OTHER in bits:
             print('Apple Trust Bits other %s %s' % (
-                sha256, values), file=sys.stderr)
+                values, sha256), file=sys.stderr)
 
         return bits
 
