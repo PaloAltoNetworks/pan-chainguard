@@ -18,7 +18,7 @@ flowchart TD
     fingerprints(cert-fingerprints.sh)
     rootfingerprintscsv[(root-fingerprints.csv)]
     intfingerprintscsv[(intermediate-fingerprints.csv)]
-	tree[(tree.json)]
+	certificatetree[(certificate-tree.json)]
 	treedocs[("certificate documents (txt, html, rst, ...)")]
     ccadb[("AllCertificateRecordsReport.csv</br>CCADB All Certificate Information")]
     mozilla[("MozillaIntermediateCerts.csv</br>PublicAllIntermediateCertsWithPEMReport.csv</br>Intermediate CA certificates from Mozilla")]
@@ -42,8 +42,8 @@ flowchart TD
     sprocket-->rootfingerprintscsv
     rootfingerprintscsv-->chain
     chain-->intfingerprintscsv
-	chain-->tree
-	tree-->chainring
+	chain-->certificatetree
+	certificatetree-->chainring
 	chainring-->treedocs
     rootfingerprintscsv-->link
     intfingerprintscsv-->link
