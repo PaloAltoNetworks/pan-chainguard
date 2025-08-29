@@ -1,6 +1,46 @@
 Release History
 ===============
 
+0.10.0 (2025-08-29)
+-------------------
+
+- etc/derailer.py: New utility program to perform vendor root CA
+  program analysis.
+
+  Currently determines vendor root store certificate counts from
+  multiple sources, and can be used to verify sprocket.py stats
+  counts.
+
+- Support CCADB All Included Root Certificate Trust Bits CSV file for
+  root certificate inclusion.  When utilised the equivalent of the
+  SERVER_AUTHENTICATION trust bit must be set for the vendor.  The
+  bits are per-vendor, and not the same as the All Certificates
+  Information "Trust Bits for Root Cert" field which is a union of all
+  vendors.
+
+  To use download:
+  https://ccadb.my.salesforce-sites.com/ccadb/AllIncludedRootCertsCSV
+  and specify the path using the sprocket.py --trust-settings option.
+
+- Use V3 All Certificate Information CSV
+  (AllCertificateRecordsCSVFormatv3).
+
+- chain.py: For duplicate certificate fingerprints in CCADB, retain a
+  root certificate, or intermediate when no root.
+
+- guard.py: Display count of disabled default trusted CAs for --show.
+
+- chain.py: Don't allow intermediate certificates with null 'Derived
+  Trust Bits'.
+
+  This occurs when the intersection of an intermediate's Extended Key
+  Usage (EKU) values and its root certificate trust bits are disjoint
+  (empty).
+
+- chainring.py: Add generated time to html format when verbose.
+
+- Documentation fixes and improvements.
+
 0.9.0 (2025-07-10)
 ------------------
 
