@@ -404,6 +404,8 @@ sprocket.py Usage
                            CCADB all certificate information CSV path
      -f PATH, --fingerprints PATH
                            root CA fingerprints CSV path
+     -T PATH, --trust-settings PATH
+                           CCADB root certificate trust bit settings CSV path
      --policy JSON         JSON policy object path or string
      --stats               print source stats
      --verbose             enable verbosity
@@ -423,17 +425,29 @@ downloaded before running ``sprocket.py``.
 
    $ cd tmp
 
-   $ curl -sOJ  https://ccadb.my.salesforce-sites.com/ccadb/AllCertificateRecordsCSVFormatv3
+   $ curl -sOJ https://ccadb.my.salesforce-sites.com/ccadb/AllCertificateRecordsCSVFormatv3
 
    $ ls -lh AllCertificateRecordsReport.csv
-   -rw-r--r--  1 ksteves  ksteves   7.9M Dec 10 11:56 AllCertificateRecordsReport.csv
+   -rw-r--r--  1 ksteves  ksteves   8.5M Aug 26 09:46 AllCertificateRecordsReport.csv
+
+The CCADB ``AllIncludedRootCertsCSV.csv`` CSV file *should* be
+downloaded before running ``sprocket.py``.  This is currently
+optional, however it may become required in the future.
+
+::
+
+   $ curl -sOJ https://ccadb.my.salesforce-sites.com/ccadb/AllIncludedRootCertsCSV
+
+   $ ls -lh AllIncludedRootCertsCSV.csv
+   -rw-r--r--  1 ksteves  ksteves  98.9K Aug 26 09:46 AllIncludedRootCertsCSV.csv
 
    $ cd ..
 
    $ bin/sprocket.py --verbose --ccadb tmp/AllCertificateRecordsReport.csv \
+   > --trust-settings tmp/AllIncludedRootCertsCSV.csv \
    > --fingerprints tmp/root-fingerprints.csv
    policy: {'sources': ['mozilla'], 'operation': 'union', 'trust_bits': []}
-   mozilla: 174 total certificates
+   mozilla: 145 total certificates
 
 fling.py - Deprecated
 ~~~~~~~~~~~~~~~~~~~~~
@@ -576,7 +590,14 @@ intermediate certificate is in OneCRL and exclude it.
    $ pwd
    /home/ksteves/git/pan-chainguard
 
-   $ curl -sOJ  https://ccadb.my.salesforce-sites.com/mozilla/IntermediateCertsInOneCRLReportCSV
+   $ cd tmp
+
+   $ curl -sOJ https://ccadb.my.salesforce-sites.com/mozilla/IntermediateCertsInOneCRLReportCSV
+
+   $ ls -lh IntermediateCertsInOneCRL.csv
+   rw-r--r--  1 ksteves  ksteves   543K Aug 26 09:46 IntermediateCertsInOneCRL.csv
+
+   $ cd ..
 
    $ bin/chain.py --verbose -c tmp/AllCertificateRecordsReport.csv -r tmp/root-fingerprints.csv \
    > -o tmp/IntermediateCertsInOneCRL.csv
@@ -1035,6 +1056,7 @@ from:
 The steps to implement this use case include:
 
 #. Download *CCADB All Certificate Information* CSV file
+#. Download *CCADB All Included Root Certificate Trust Bits* CSV file
 #. Create ``sprocket.py policy.json`` file
 #. Run ``sprocket.py`` to create *root CA fingerprints* CSV file
 #. Download ``pan-chainguard-content`` certificate archive
@@ -1049,10 +1071,23 @@ Download *CCADB All Certificate Information* CSV file
    $ pwd
    /home/ksteves/git/pan-chainguard/tmp
 
-   $ curl --clobber -sOJ  https://ccadb.my.salesforce-sites.com/ccadb/AllCertificateRecordsCSVFormatv3
+   $ curl --clobber -sOJ https://ccadb.my.salesforce-sites.com/ccadb/AllCertificateRecordsCSVFormatv3
 
    $ ls -lh AllCertificateRecordsReport.csv
-   -rw-r--r--  1 ksteves  ksteves   8.0M Mar 24 14:11 AllCertificateRecordsReport.csv
+   -rw-r--r--  1 ksteves  ksteves   8.5M Aug 28 16:34 AllCertificateRecordsReport.csv
+
+Download *CCADB All Included Root Certificate Trust Bits* CSV file
+..................................................................
+
+::
+
+   $ pwd
+   /home/ksteves/git/pan-chainguard/tmp
+
+   $ curl --clobber -sOJ https://ccadb.my.salesforce-sites.com/ccadb/AllIncludedRootCertsCSV
+
+   $ ls -lh AllIncludedRootCertsCSV.csv
+   -rw-r--r--  1 ksteves  ksteves  98.9K Aug 28 16:35 AllIncludedRootCertsCSV.csv
 
 Create ``sprocket.py policy.json`` file
 .......................................
@@ -1072,9 +1107,11 @@ Run ``sprocket.py`` to create *root CA fingerprints* CSV file
    $ pwd
    /home/ksteves/git/pan-chainguard
 
-   $ bin/sprocket.py --verbose -c tmp/AllCertificateRecordsReport.csv --policy tmp/policy.json -f tmp/root-fingerprints.csv
+   $ bin/sprocket.py --verbose -c tmp/AllCertificateRecordsReport.csv \
+   > --trust-settings tmp/AllIncludedRootCertsCSV.csv \
+   > --policy tmp/policy.json -f tmp/root-fingerprints.csv
    policy: {'sources': ['mozilla', 'chrome'], 'operation': 'union', 'trust_bits': []}
-   mozilla, chrome: 177 total certificates
+   mozilla, chrome: 148 total certificates
 
 Download ``pan-chainguard-content`` certificate archive
 .......................................................
@@ -1092,7 +1129,7 @@ root certificates, which are not used for this use case.
    $ curl -so certificates-old.tgz https://raw.githubusercontent.com/PaloAltoNetworks/pan-chainguard-content/main/latest-certs/certificates-new.tgz
 
    $ ls -lh certificates-old.tgz
-   -rw-r--r--  1 ksteves  ksteves   2.0M Mar 26 11:56 certificates-old.tgz
+   -rw-r--r--  1 ksteves  ksteves   2.1M Aug 28 16:41 certificates-old.tgz
 
 Run ``link.py`` to create new certificate archive
 .................................................
@@ -1103,11 +1140,11 @@ Run ``link.py`` to create new certificate archive
    /home/ksteves/git/pan-chainguard
 
    $ bin/link.py --verbose -f tmp/root-fingerprints.csv --certs-old tmp/certificates-old.tgz --certs-new tmp/certificates-new.tgz
-   certs-old: 177
+   certs-old: 148
    MozillaIntermediateCerts: 0
    PublicAllIntermediateCerts: 0
    crt.sh: 0
-   Total certs-new: 177
+   Total certs-new: 148
 
 Run ``guard.py`` to update PAN-OS trusted CAs
 .............................................
