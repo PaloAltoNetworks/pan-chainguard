@@ -41,7 +41,7 @@ libpath = os.path.dirname(os.path.abspath(__file__))
 sys.path[:0] = [os.path.join(libpath, os.pardir)]
 
 from pan_chainguard import title, __version__
-from pan_chainguard.ccadb import revoked, valid_from_to
+from pan_chainguard.ccadb import revoked, valid_from, valid_to
 
 args = None
 downloads = {}
@@ -90,10 +90,20 @@ async def main_loop():
         if k in vendors_:
             for x in v:
                 fingerprints = x()
+                messages = check_validity(ccadb, fingerprints)
+                m = []
+                for type_ in sorted(messages.keys()):
+                    m.append(f'{len(messages[type_])} {type_}')
+                summary = ''
+                if m:
+                    summary = ', '.join(m)
+                    summary = ' (%s)' % summary
                 print(f'{x.__name__}: '
-                      f'{len(fingerprints)} total certificates')
+                      f'{len(fingerprints)} root CAs{summary}')
                 if args.verbose:
-                    check_validity(ccadb, fingerprints, x.__name__)
+                    for type_ in sorted(messages.keys()):
+                        for msg in messages[type_]:
+                            print(f'{x.__name__}: {msg}')
                 if args.save:
                     directory = Path(args.save)
                     path = directory / f'{x.__name__}.txt'
@@ -147,13 +157,16 @@ def load_ccadb(path):
     return ccadb
 
 
-def check_validity(ccadb, fingerprints, vendor):
+def check_validity(ccadb, fingerprints):
     if not ccadb:
-        return
+        return {}
+
+    messages = defaultdict(list)
 
     for sha256 in fingerprints:
         if sha256 not in ccadb:
-            print(f'{vendor}: {sha256} not in CCADB')
+            msg = f'Not in CCADB: {sha256}'
+            messages['not in ccadb'].append(msg)
             continue
 
         row = ccadb[sha256][0]
@@ -162,20 +175,29 @@ def check_validity(ccadb, fingerprints, vendor):
 
         x = 'Root Certificate'
         if len(ccadb[sha256]) == 1 and cert_type != x:
-            err = f'Not a {x}'
-            print(f'{vendor}: {err} {sha256} {name}')
+            msg = f'Not a {x}: {sha256} {name}'
+            messages['not root'].append(msg)
 
         if len(ccadb[sha256]) > 1:
-            err = f'{len(ccadb[sha256])} duplicates'
-            print(f'{vendor}: {err} {sha256} {name}')
+            msg = f'{len(ccadb[sha256])} duplicates: {sha256} {name}'
+            messages['duplicates'].append(msg)
 
         ret, err = revoked(row)
         if ret:
-            print(f'{vendor}: {err} {sha256} {name}')
+            msg = f'{err}: {sha256} {name}'
+            messages['revoked'].append(msg)
 
-        ret, err = valid_from_to(row)
+        ret, err = valid_from(row)
         if not ret:
-            print(f'{vendor}: {err} {sha256} {name}')
+            msg = f'{err}: {sha256} {name}'
+            messages['not yet valid'].append(msg)
+
+        ret, err = valid_to(row)
+        if not ret:
+            msg = f'{err}: {sha256} {name}'
+            messages['expired'].append(msg)
+
+    return messages
 
 
 def save(path, fingerprints):
