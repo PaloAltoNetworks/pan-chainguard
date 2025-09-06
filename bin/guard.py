@@ -205,7 +205,7 @@ async def main_loop():
                     qs={'type': 'version'})
         elem = xapi.element_root.find('./result/model')
         if elem is not None:
-            if elem.text == 'Panorama':
+            if elem.text == 'Panorama' or elem.text.startswith('M-'):
                 panorama = True
         else:
             print("Can't get model", file=sys.stderr)
