@@ -26,12 +26,12 @@ import os
 from pathlib import Path
 import re
 import sys
+from typing import Optional
 import warnings
 
 try:
     from cryptography import x509
     from cryptography.hazmat.primitives import hashes
-    from cryptography.utils import CryptographyDeprecationWarning
 except ImportError:
     print('Install cryptography: https://pypi.org/project/cryptography/',
           file=sys.stderr)
@@ -83,9 +83,6 @@ async def main_loop():
     if args.ccadb:
         ccadb = load_ccadb(args.ccadb)
 
-    if not args.debug:
-        warnings.filterwarnings('ignore',
-                                category=CryptographyDeprecationWarning)
     for k, v in vendors.items():
         if k in vendors_:
             for x in v:
@@ -131,13 +128,28 @@ async def download(session, url):
     downloads[url] = True, content
 
 
-def load_pem_cert(data: bytes) -> x509.Certificate:
-    return x509.load_pem_x509_certificate(data)
+def pem_cert_fingerprint(data: bytes) -> Optional[str]:
+    try:
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter('always')
+            cert = x509.load_pem_x509_certificate(data)
+            sha256 = cert.fingerprint(hashes.SHA256()).hex().upper()
 
+        if args.debug:
+            for warn in w:
+                print(f'{warn.category.__name__}: {warn.message}',
+                      file=sys.stderr)
+                print('SHA256', sha256, file=sys.stderr)
 
-def pem_cert_fingerprint(data: bytes) -> str:
-    cert = x509.load_pem_x509_certificate(data)
-    return cert.fingerprint(hashes.SHA256()).hex().upper()
+        return sha256
+
+    except Exception as e:
+        # Future-proof: cryptography may raise instead of warn
+        pem_sha256 = hashlib.sha256(data).hexdigest().upper()
+        print(f'{type(e).__name__}: {e}', file=sys.stderr)
+        print('Failed to load cert. PEM blob SHA256', pem_sha256,
+              file=sys.stderr)
+        return
 
 
 def load_ccadb(path):
@@ -277,7 +289,8 @@ def mozilla_1():
         pem = row.get('PEM')
         if pem:
             fingerprint = pem_cert_fingerprint(pem.encode())
-            fingerprints.append(fingerprint)
+            if fingerprint is not None:
+                fingerprints.append(fingerprint)
 
     return fingerprints
 
@@ -317,7 +330,8 @@ def microsoft_1():
         pem = row.get('PEM')
         if pem:
             fingerprint = pem_cert_fingerprint(pem.encode())
-            fingerprints.append(fingerprint)
+            if fingerprint is not None:
+                fingerprints.append(fingerprint)
 
     return fingerprints
 
@@ -388,7 +402,8 @@ def chrome_1():
     fingerprints = []
     for pem in certs:
         fingerprint = pem_cert_fingerprint(pem.encode())
-        fingerprints.append(fingerprint)
+        if fingerprint is not None:
+            fingerprints.append(fingerprint)
 
     return fingerprints
 
