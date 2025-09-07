@@ -43,6 +43,8 @@ sys.path[:0] = [os.path.join(libpath, os.pardir)]
 from pan_chainguard import title, __version__
 from pan_chainguard.ccadb import revoked, valid_from, valid_to
 
+DOWNLOAD_TIMEOUT = 5
+
 args = None
 downloads = {}
 
@@ -65,7 +67,9 @@ async def main_loop():
                 print(k, x.__name__, x.url, file=sys.stderr)
 
     vendors_ = set(args.vendor)
-    async with aiohttp.ClientSession() as session:
+    timeout = aiohttp.ClientTimeout(total=DOWNLOAD_TIMEOUT)
+
+    async with aiohttp.ClientSession(timeout=timeout) as session:
         urls = set([x.url for vendor in vendors_
                     for x in vendors[vendor]])
         tasks = [download(session, url) for url in urls]
@@ -119,15 +123,20 @@ async def download(session, url):
                 x = (f'Error: status code {response.status}')
                 downloads[url] = False, x
                 return
+
             content = await response.text()
             if args.verbose:
                 print(f'Downloaded {len(content)} bytes from {url}')
-    except aiohttp.ClientError as e:
-        x = f'Request failed: {e}'
-        downloads[url] = False, x
-        return
+            downloads[url] = True, content
 
-    downloads[url] = True, content
+    except (aiohttp.ClientError, asyncio.TimeoutError) as e:
+        x = f'Request failed: '
+        x += e if str(e) else type(e).__name__
+        downloads[url] = False, x
+    except Exception as e:
+        x = f'Unexpected {type(e).__name__}'
+        x += f': {e}' if str(e) else ''
+        downloads[url] = False, x
 
 
 def pem_cert_fingerprint(data: bytes) -> Optional[str]:
