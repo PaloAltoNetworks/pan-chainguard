@@ -87,6 +87,8 @@ async def main_loop():
         if k in vendors_:
             for x in v:
                 fingerprints = x()
+                if fingerprints is None:
+                    continue
                 messages = check_validity(ccadb, fingerprints)
                 m = []
                 for type_ in sorted(messages.keys()):
@@ -260,7 +262,7 @@ def mozilla_0():
     url = mozilla_0.url
     r, data = downloads[url]
     if not r:
-        print(f'{url}: {data}')
+        print(f'{mozilla_0.__name__}: {data}', file=sys.stderr)
         return
 
     reader = csv.DictReader(data.splitlines())
@@ -279,7 +281,7 @@ def mozilla_1():
     url = mozilla_1.url
     r, data = downloads[url]
     if not r:
-        print(f'{url}: {data}')
+        print(f'{mozilla_1.__name__}: {data}', file=sys.stderr)
         return
 
     reader = csv.DictReader(data.splitlines())
@@ -301,7 +303,7 @@ def microsoft_0():
     url = microsoft_0.url
     r, data = downloads[url]
     if not r:
-        print(f'{url}: {data}')
+        print(f'{microsoft_0.__name__}: {data}', file=sys.stderr)
         return
 
     reader = csv.DictReader(data.splitlines())
@@ -320,7 +322,7 @@ def microsoft_1():
     url = microsoft_1.url
     r, data = downloads[url]
     if not r:
-        print(f'{url}: {data}')
+        print(f'{microsoft_1.__name__}: {data}', file=sys.stderr)
         return
 
     reader = csv.DictReader(data.splitlines())
@@ -342,7 +344,7 @@ def microsoft_2():
     url = microsoft_2.url
     r, data = downloads[url]
     if not r:
-        print(f'{url}: {data}')
+        print(f'{microsoft_2.__name__}: {data}', file=sys.stderr)
         return
 
     reader = csv.DictReader(data.splitlines())
@@ -367,7 +369,7 @@ def chrome_0():
     url = chrome_0.url
     r, data = downloads[url]
     if not r:
-        print(f'{url}: {data}')
+        print(f'{chrome_0.__name__}: {data}', file=sys.stderr)
         return
 
     reader = csv.DictReader(data.splitlines())
@@ -386,7 +388,7 @@ def chrome_1():
     url = chrome_1.url
     r, data = downloads[url]
     if not r:
-        print(f'{url}: {data}')
+        print(f'{chrome_1.__name__}: {data}', file=sys.stderr)
         return
 
     PEM_PATTERN = re.compile(
@@ -414,7 +416,7 @@ def apple_0():
     url = apple_0.url
     r, data = downloads[url]
     if not r:
-        print(f'{url}: {data}')
+        print(f'{apple_0.__name__}: {data}', file=sys.stderr)
         return
 
     reader = csv.DictReader(data.splitlines())
