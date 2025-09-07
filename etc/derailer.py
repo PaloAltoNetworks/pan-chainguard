@@ -155,7 +155,7 @@ def pem_cert_fingerprint(data: bytes) -> Optional[str]:
 def load_ccadb(path):
     ccadb = defaultdict(list)
     try:
-        with open(args.ccadb, 'r', newline='') as csvfile:
+        with open(path, 'r', newline='') as csvfile:
             reader = csv.DictReader(csvfile,
                                     dialect='unix')
             for row in reader:
@@ -163,7 +163,7 @@ def load_ccadb(path):
                 ccadb[sha256].append(row)
 
     except OSError as e:
-        print('%s: %s' % (args.ccadb, e), file=sys.stderr)
+        print('%s: %s' % (path, e), file=sys.stderr)
         sys.exit(1)
 
     return ccadb
