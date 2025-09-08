@@ -267,7 +267,7 @@ def set_url(url):
 
 @set_url('https://ccadb.my.salesforce-sites.com/ccadb/'
          'AllIncludedRootCertsCSV')
-def mozilla_0():
+def mozilla_0() -> Optional[list]:
     url = mozilla_0.url
     r, data = downloads[url]
     if not r:
@@ -286,7 +286,7 @@ def mozilla_0():
 
 @set_url('https://ccadb.my.salesforce-sites.com/mozilla/'
          'IncludedRootsDistrustTLSSSLPEMCSV?TrustBitsInclude=Websites')
-def mozilla_1():
+def mozilla_1() -> Optional[list]:
     url = mozilla_1.url
     r, data = downloads[url]
     if not r:
@@ -308,7 +308,7 @@ def mozilla_1():
 
 @set_url('https://ccadb.my.salesforce-sites.com/ccadb/'
          'AllIncludedRootCertsCSV')
-def microsoft_0():
+def microsoft_0() -> Optional[list]:
     url = microsoft_0.url
     r, data = downloads[url]
     if not r:
@@ -327,7 +327,7 @@ def microsoft_0():
 
 @set_url('https://ccadb.my.salesforce-sites.com/microsoft/'
          'IncludedRootsPEMCSVForMSFT?MicrosoftEKUs=Server Authentication')
-def microsoft_1():
+def microsoft_1() -> Optional[list]:
     url = microsoft_1.url
     r, data = downloads[url]
     if not r:
@@ -349,7 +349,7 @@ def microsoft_1():
 
 @set_url('https://ccadb.my.salesforce-sites.com/microsoft/'
          'IncludedCACertificateReportForMSFTCSV')
-def microsoft_2():
+def microsoft_2() -> Optional[list]:
     url = microsoft_2.url
     r, data = downloads[url]
     if not r:
@@ -374,7 +374,7 @@ def microsoft_2():
 
 @set_url('https://ccadb.my.salesforce-sites.com/ccadb/'
          'AllIncludedRootCertsCSV')
-def chrome_0():
+def chrome_0() -> Optional[list]:
     url = chrome_0.url
     r, data = downloads[url]
     if not r:
@@ -393,7 +393,7 @@ def chrome_0():
 
 @set_url('https://raw.githubusercontent.com/chromium/chromium/'
          'main/net/data/ssl/chrome_root_store/root_store.certs')
-def chrome_1():
+def chrome_1() -> Optional[list]:
     url = chrome_1.url
     r, data = downloads[url]
     if not r:
@@ -421,7 +421,7 @@ def chrome_1():
 
 @set_url('https://ccadb.my.salesforce-sites.com/ccadb/'
          'AllIncludedRootCertsCSV')
-def apple_0():
+def apple_0() -> Optional[list]:
     url = apple_0.url
     r, data = downloads[url]
     if not r:
