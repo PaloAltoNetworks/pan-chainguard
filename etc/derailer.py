@@ -130,12 +130,11 @@ async def download(session, url):
             downloads[url] = True, content
 
     except (aiohttp.ClientError, asyncio.TimeoutError) as e:
-        x = f'Request failed: '
-        x += e if str(e) else type(e).__name__
+        x = 'Request failed: ' + (str(e) or type(e).__name__)
         downloads[url] = False, x
     except Exception as e:
-        x = f'Unexpected {type(e).__name__}'
-        x += f': {e}' if str(e) else ''
+        msg = str(e)
+        x = f'Unexpected {type(e).__name__}' + (': ' + msg if msg else '')
         downloads[url] = False, x
 
 
