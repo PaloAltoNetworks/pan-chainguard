@@ -213,9 +213,14 @@ async def main_loop():
         print('pan.xapi.PanXapi:', e, file=sys.stderr)
         sys.exit(1)
 
-    xpath = Xpath(panorama=panorama,
-                  vsys=args.vsys,
-                  template=args.template)
+    try:
+        xpath = Xpath(panorama=panorama,
+                      vsys=args.vsys,
+                      template=args.template)
+    except ValueError as e:
+        print(e, file=sys.stderr)
+        sys.exit(1)
+
     if args.debug > 1:
         print('Xpath():', str(xpath), file=sys.stderr)
         print(xpath.certificates(), file=sys.stderr)
