@@ -130,7 +130,7 @@ def get_trust_settings():
 
     try:
         settings = CcadbRootTrustSettings(path=args.trust_settings,
-                                          debug=True if args.debug else False)
+                                          debug=bool(args.debug))
     except CcadbError as e:
         print('CcadbRootTrustSettings: %s' % e, file=sys.stderr)
         sys.exit(1)
