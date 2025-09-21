@@ -142,8 +142,10 @@ def format_html(tree):
 
     if args.verbose:
         html += f'''<h2>Certificate Totals</h2>
+<blockquote>
 Root Certificates: {tree_to_html.roots}<br>
 Intermediate Certificates: {tree_to_html.intermediates}<br>
+</blockquote>
 '''
     if args.verbose:
         html += '<h2>Certificate Tree</h2>\n'
@@ -156,7 +158,9 @@ Intermediate Certificates: {tree_to_html.intermediates}<br>
             value = '%.4f' % v if isinstance(v, float) else '%d' % v
             stats_ += '%s: %s<br>\n' % (name, value)
         html += f'''<h2>Certificate Tree Statistics</h2>
-{stats_}'''
+<blockquote>
+{stats_}</blockquote>
+'''
 
         now_utc = datetime.now(timezone.utc)
         date_str = now_utc.strftime('%Y-%m-%d %H:%M:%S UTC')
