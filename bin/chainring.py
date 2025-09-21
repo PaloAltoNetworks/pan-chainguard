@@ -215,7 +215,7 @@ def read_tree():
         with open(args.tree, 'r') as f:
             json_data = f.read()
         data = json.loads(json_data)
-    except (OSError, TypeError) as e:
+    except (OSError, ValueError) as e:
         print('%s: %s' % (args.tree, e), file=sys.stderr)
         sys.exit(1)
 
