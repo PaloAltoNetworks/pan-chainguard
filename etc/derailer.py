@@ -197,26 +197,37 @@ def check_validity(ccadb, fingerprints):
 
         x = 'Root Certificate'
         if len(ccadb[sha256]) == 1 and cert_type != x:
-            msg = f'Not a {x}: {sha256} {name}'
+            msg = f'Not a {x}: {sha256} "{name}"'
             messages['not root'].append(msg)
 
         if len(ccadb[sha256]) > 1:
-            msg = f'{len(ccadb[sha256])} duplicates: {sha256} {name}'
+            total = defaultdict(int)
+            for x in ccadb[sha256]:
+                if x['Certificate Record Type'] == 'Root Certificate':
+                    total['R'] += 1
+                elif (x['Certificate Record Type'] ==
+                      'Intermediate Certificate'):
+                    total['I'] += 1
+                else:
+                    raise RuntimeError(x['Certificate Record Type'])
+            totals = ' '.join(f'{k}={v}' for k, v in total.items())
+            msg = (f'{len(ccadb[sha256])} duplicate certificates: '
+                   f'{sha256} {totals} "{name}"')
             messages['duplicates'].append(msg)
 
         ret, err = revoked(row)
         if ret:
-            msg = f'{err}: {sha256} {name}'
+            msg = f'{err}: {sha256} "{name}"'
             messages['revoked'].append(msg)
 
         ret, err = valid_from(row)
         if not ret:
-            msg = f'{err}: {sha256} {name}'
+            msg = f'{err}: {sha256} "{name}"'
             messages['not yet valid'].append(msg)
 
         ret, err = valid_to(row)
         if not ret:
-            msg = f'{err}: {sha256} {name}'
+            msg = f'{err}: {sha256} "{name}"'
             messages['expired'].append(msg)
 
     return messages
