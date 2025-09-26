@@ -244,6 +244,10 @@ def get_intermediates(tree, invalid, warning):
     intermediates = []
     total_invalid = 0
 
+    EXCLUDE_INTERMEDIATES = [
+        'C0A6F4DC63A24BFDCF54EF2A6A082A0A72DE35803E2FF5FF527AE5D87206DFD5',
+    ]
+
     try:
         data = pan_chainguard.util.read_fingerprints(
             path=args.root_fingerprints)
@@ -271,6 +275,11 @@ def get_intermediates(tree, invalid, warning):
             print('Not found in CCADB: %s' % (
                 sha256), file=sys.stderr)
             total_invalid += 1
+            continue
+
+        if sha256 in EXCLUDE_INTERMEDIATES:
+            print('Skip intermediates for root: %s' % (
+                sha256), file=sys.stderr)
             continue
 
         node = tree.get_node(sha256)
