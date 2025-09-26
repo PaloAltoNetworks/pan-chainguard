@@ -18,6 +18,7 @@
 
 import argparse
 import asyncio
+from collections import defaultdict
 from datetime import datetime, timezone
 from html import escape
 import json
@@ -237,23 +238,22 @@ def read_tree():
 def test_collisions(tree):
     data = pan_chainguard.util.tree_to_dict(tree=tree)
 
-    names = []
-    collisions = []
+    names = defaultdict(list)
+    for node in data['nodes']:
+        ident = node.get('identifier')
+        if ident:
+            name = pan_chainguard.util.hash_to_name(sha256=ident)
+            names[name].append(ident)
 
-    for x in data['nodes']:
-        if x['identifier']:
-            name = pan_chainguard.util.hash_to_name(
-                sha256=x['identifier'])
-            if name in names:
-                collisions.append(name)
-                print('collision %s' % name, file=sys.stderr)
-            else:
-                names.append(name)
+    # keep only names that map to >1 identifiers
+    collisions = {name: ids for name, ids in names.items() if len(ids) > 1}
 
     if collisions:
-        print('%d certificate name collisions: %s' %
-              (len(collisions), collisions),
+        print(f'{len(collisions)} certificate name collisions',
               file=sys.stderr)
+        for name in sorted(collisions):
+            for ident in collisions[name]:
+                print(f'    {name} {ident}', file=sys.stderr)
         return False
     else:
         print('no certificate name collisions', file=sys.stderr)
