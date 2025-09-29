@@ -718,12 +718,24 @@ def show_tree(xapi, xpath):
                 tree.add_node(build_node(x), parent=parent)
                 add_children(x['cert-name'], x['subject-hash'])
 
+    def format_stats(tree):
+        stats = pan_chainguard.util.stats_from_tree(tree=tree)
+
+        for k, v in stats.items():
+            name = k.replace('_', ' ').title()
+            value = '%.4f' % v if isinstance(v, float) else '%d' % v
+            print('%s: %s' % (name, value))
+
     for x in roots + orphans:
         tree.add_node(build_node(x), parent=0)
         add_children(x['cert-name'], x['subject-hash'])
 
-    duplicates = duplicates_in_path(tree)
     print(tree.show(stdout=False), end='')
+
+    if args.verbose:
+        format_stats(tree)
+
+    duplicates = duplicates_in_path(tree)
     if args.verbose and duplicates:
         print(f'Info: {len(duplicates)} duplicate subject in tree path')
         for x in duplicates:
