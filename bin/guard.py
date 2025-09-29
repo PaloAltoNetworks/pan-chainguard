@@ -638,6 +638,38 @@ def show(xapi, xpath):
     show_disabled_trusted(xapi, xpath)
 
 
+def duplicates_in_path(tree: Tree) -> list[dict]:
+    def dfs(nid: str, seen: set[str], out: list[dict]) -> None:
+        new_seen = set(seen)
+        node = tree.get_node(nid)
+        if node.tag != 'Root':
+            key = node.data['subject-hash']
+
+            if key in seen:
+                out.append({
+                    'node-id': nid,
+                    'tag': str(node.tag),
+                    'key': key,
+                    'node-data': node.data,
+                })
+                return  # stop this root-to-leaf path here
+
+            else:
+                new_seen.add(key)
+
+        children = tree.children(nid)
+        if not children:
+            return  # leaf reached, no dup on this path
+
+        for child in children:
+            dfs(child.identifier, new_seen, out)
+
+    duplicates = []
+    dfs(tree.root, set(), duplicates)
+
+    return duplicates
+
+
 def show_tree(xapi, xpath):
     data = get_certs(xapi, xpath)
     issuers = defaultdict(list)
@@ -672,7 +704,7 @@ def show_tree(xapi, xpath):
                f'Subject: "{subject}" '
                f'Issuer: "{issuer}"')
 
-        node = Node(tag=tag, identifier=x['cert-name'])
+        node = Node(tag=tag, identifier=x['cert-name'], data=x)
 
         return node
 
@@ -690,7 +722,12 @@ def show_tree(xapi, xpath):
         tree.add_node(build_node(x), parent=0)
         add_children(x['cert-name'], x['subject-hash'])
 
+    duplicates = duplicates_in_path(tree)
     print(tree.show(stdout=False), end='')
+    if args.verbose and duplicates:
+        print(f'Info: {len(duplicates)} duplicate subject in tree path')
+        for x in duplicates:
+            print(f'{x['key']} {x['tag']}')
 
     treelen = len(tree) - 1  # don't count root node
     sublen = 0
