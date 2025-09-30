@@ -277,11 +277,6 @@ def get_intermediates(tree, invalid, warning):
             total_invalid += 1
             continue
 
-        if sha256 in EXCLUDE_INTERMEDIATES:
-            print('Skip intermediates for root: %s' % (
-                sha256), file=sys.stderr)
-            continue
-
         node = tree.get_node(sha256)
         status_root = node.data['Status of Root Cert']
         statuses = status_root.split(';')
@@ -290,6 +285,12 @@ def get_intermediates(tree, invalid, warning):
             print('Certificate not in common root store: '
                   '%s: %s' % (sha256, status_root),
                   file=sys.stderr)
+
+        if sha256 in EXCLUDE_INTERMEDIATES:
+            print('Skip intermediates for root: %s' % (
+                sha256), file=sys.stderr)
+            newtree.add_node(node=node, parent=0)
+            continue
 
         subtree = tree.subtree(sha256)
         nodes = subtree.all_nodes()
