@@ -49,8 +49,12 @@ def root_status(node):
         return ''
 
 
+def tree_sort(node):
+    return str(node.data['Certificate Name'])
+
+
 def format_text(tree):
-    txt = tree.show(stdout=None)
+    txt = tree.show(stdout=None, key=tree_sort)
     print(txt, end='')
 
 
@@ -81,7 +85,8 @@ def format_rst(tree):
                 f'{node.tag[64:]}'
             )
 
-        for i, child in enumerate(tree.children(node_id)):
+        for i, child in enumerate(sorted(tree.children(node_id),
+                                         key=tree_sort)):
             if i == 0:
                 lines.append('')
             lines.extend(tree_to_rst(tree, child.identifier, level + 1))
@@ -129,7 +134,7 @@ def format_html(tree):
 
         if children:
             html += '<ul>\n'
-            for child in children:
+            for child in sorted(children, key=tree_sort):
                 html += tree_to_html(tree, child.identifier)
             html += '</ul>\n'
 
