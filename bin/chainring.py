@@ -81,7 +81,7 @@ def format_rst(tree):
             # XXX uncertain if we can monospace the anchor
             lines.append(
                 f'{"  " * level}* '
-                f'`{sha256} <https://crt.sh/?q={sha256}>`_ '
+                f'`{sha256} <https://crt.sh/?sha256={sha256}>`_ '
                 f'{node.tag[64:]}'
             )
 
@@ -127,7 +127,7 @@ def format_html(tree):
                 except AttributeError:
                     tree_to_html.intermediates = 1
 
-            html += (f'<li><a href="https://crt.sh/?q={sha256}">'
+            html += (f'<li><a href="https://crt.sh/?sha256={sha256}">'
                      f'<code>{sha256}</code></a>'
                      f'{root_vendors}'
                      f'{escape(node.tag[64:])}</li>\n')
