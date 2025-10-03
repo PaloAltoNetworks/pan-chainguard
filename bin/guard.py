@@ -739,7 +739,7 @@ def show_tree(xapi, xpath):
     if args.verbose and duplicates:
         print(f'Info: {len(duplicates)} duplicate subject in tree path')
         for x in duplicates:
-            print(f'{x['key']} {x['tag']}')
+            print(f"{x['key']} {x['tag']}")
 
     treelen = len(tree) - 1  # don't count root node
     sublen = 0
