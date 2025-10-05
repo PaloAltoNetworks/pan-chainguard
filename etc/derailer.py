@@ -108,8 +108,7 @@ async def main_loop():
                         for msg in messages[type_]:
                             print(f'{x.__name__}: {msg}')
                 if args.save:
-                    directory = Path(args.save)
-                    path = directory / f'{x.__name__}.txt'
+                    path = args.save / f'{x.__name__}.txt'
                     digest = save(path, sorted(fingerprints))
                     if digest and args.verbose:
                         print(f'Saved fingerprints '
@@ -469,10 +468,12 @@ def parse_args():
                         help='vendor')
     parser.add_argument('-s', '--save',
                         metavar='DIR',
+                        type=Path,
                         help='save fingerprints to directory')
     # https://ccadb.my.salesforce-sites.com/ccadb/AllCertificateRecordsCSVFormatv3
     parser.add_argument('-c', '--ccadb',
                         metavar='PATH',
+                        type=Path,
                         help='CCADB all certificate information CSV path')
     parser.add_argument('--verbose',
                         action='store_true',
