@@ -1,6 +1,59 @@
 Release History
 ===============
 
+0.11.0 (2025-10-07)
+-------------------
+
+- etc/derailer.py: Use type=pathlib.Path for argparse.
+
+- bin/guard.py: Fix f-string quoting.  Don't use PEP 701 syntax.
+
+- bin/chainring.py: Use sha256 for crt.sh query string parameter.  No
+  functional change.
+
+- bin/chainring.py: Sort tree output by subject.
+
+- bin/guard.py: Print pan_chainguard.util.stats_from_tree result when
+  verbose for show-tree.
+
+- bin/guard.py: Detect same subject as ancestor condition in PAN-OS
+  derived certificate tree.
+
+- bin/chain.py: Implement workaround for #7.
+
+- bin/chainring.py: Optimise and more detail for test collisions.
+
+- etc/derailer.py: Add detail on duplicates in CCADB.
+
+- bin/chainring.py: Use <blockquote> for certificate totals and
+  statistics.
+
+- bin/chainring.py: Fix to use ValueError for json.loads().
+
+- bin/sprocket.py: Shorten assignment for readability.
+
+- bin/guard.py: Catch ValueError for 'template set for firewall'
+  error.
+
+- etc/derailer.py: Rework error message construction.
+
+- etc/derailer.py: Add return annotations to vendor fetchers.
+
+- etc/derailer.py: Add download timeout.
+
+- etc/derailer.py: Handle None return from vendor fetchers.
+
+- etc/derailer.py: Fix to use path argument.
+
+- etc/derailer.py: Catch cryptography warnings so we can display the
+  problem certificates.
+
+- bin/guard.py: Recognise M-Series appliance models as Panorama. #6
+
+- etc/derailer.py: Print summary line for validity issues.
+
+- Documentation fixes and improvements.
+
 0.10.0 (2025-08-29)
 -------------------
 
