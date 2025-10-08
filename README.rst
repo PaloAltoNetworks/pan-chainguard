@@ -95,3 +95,11 @@ on GitHub and as a
 `package
 <https://pypi.org/project/pan-chainguard/>`_
 on PyPi.
+
+``pan-chainguard-content`` - Certificate Content for pan-chainguard
+-------------------------------------------------------------------
+
+`pan-chainguard-content
+<https://github.com/PaloAltoNetworks/pan-chainguard-content>`_
+provides pre-generated, up-to-date content
+which can be used to simplify the deployment of ``pan-chainguard``.
