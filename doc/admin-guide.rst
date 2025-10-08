@@ -509,8 +509,8 @@ fling.py Example
    0017_thawte_Primary_Root_CA_-_G2.cer
    0019_GeoTrust_Universal_CA_2.cer
 
-cert-fingerprints.sh
-~~~~~~~~~~~~~~~~~~~~
+cert-fingerprints.sh - Deprecated
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Run ``cert-fingerprints.sh`` if you use ``fling.py`` to export the root
 store from PAN-OS.
