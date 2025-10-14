@@ -627,7 +627,8 @@ chainring.py
   using the first 26 characters of the certificate SHA-256
   fingerprint, which is 64 characters
 
-+ Lookup CCADB data by certificate SHA-256 fingerprint
++ Lookup CCADB data by full or partial certificate SHA-256 fingerprint,
+  including ``pan-chainguard`` managed **LINK-** certificate names
 
 chainring.py Usage
 ..................
@@ -649,6 +650,7 @@ chainring.py Usage
      --test-collisions     test for certificate name collisions
      -F SHA-256, --fingerprint SHA-256
                            lookup CCADB data by certificate SHA-256 fingerprint
+                           (partial fingerprint allowed)
      --verbose             enable verbosity
      --debug {0,1,2,3}     enable debug
      --version             display version

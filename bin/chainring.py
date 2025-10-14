@@ -266,22 +266,38 @@ def test_collisions(tree):
 
 
 def lookup(tree, sha256):
-    node = tree.get_node(sha256)
+    nodes = []
 
-    if node is None:
-        print('Not found: %s' % sha256, file=sys.stderr)
+    if len(sha256) == 64:
+        node = tree.get_node(sha256)
+        if node is not None:
+            nodes.append(node)
+    else:
+        s = sha256
+        if s.startswith(pan_chainguard.util.NAME_PREFIX):
+            s = s[len(pan_chainguard.util.NAME_PREFIX):]
+        s = s.upper()
+        matches = tree.filter_nodes(
+            lambda n: (isinstance(n.identifier, str) and
+                       s in n.identifier)
+        )
+        nodes.extend(matches)
+
+    if not nodes:
+        print('Not found: %s' % s, file=sys.stderr)
         return
 
-    data = node.data
-    filtered_data = {k: v for k, v in data.items() if v != ''}
-
-    print(pprint.pformat(filtered_data))
+    for node in nodes:
+        data = node.data
+        filtered_data = {k: v for k, v in data.items() if v != ''}
+        print(pprint.pformat(filtered_data))
 
 
 def parse_args():
     parser = argparse.ArgumentParser(
         usage='%(prog)s [options]',
-        description='certificate tree analysis and reporting')
+        description='certificate tree analysis and reporting',
+        formatter_class=argparse.RawTextHelpFormatter)
     parser.add_argument('--tree',
                         required=True,
                         metavar='PATH',
@@ -298,8 +314,9 @@ def parse_args():
     parser.add_argument('-F', '--fingerprint',
                         action='append',
                         metavar='SHA-256',
-                        help='lookup CCADB data by certificate SHA-256 '
-                        'fingerprint')
+                        help='''\
+lookup CCADB data by certificate SHA-256 fingerprint
+(partial fingerprint allowed)''')
     parser.add_argument('--verbose',
                         action='store_true',
                         help='enable verbosity')
