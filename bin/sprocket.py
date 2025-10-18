@@ -338,7 +338,7 @@ def parse_args():
     parser = argparse.ArgumentParser(
         usage='%(prog)s [options]',
         description='create custom root store')
-    # https://ccadb.my.salesforce-sites.com/ccadb/AllCertificateRecordsCSVFormatv3
+    # https://ccadb.my.salesforce-sites.com/ccadb/AllCertificateRecordsCSVFormatv4
     parser.add_argument('-c', '--ccadb',
                         required=True,
                         metavar='PATH',
