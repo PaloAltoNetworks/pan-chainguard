@@ -1,6 +1,18 @@
 Release History
 ===============
 
+0.12.0 (2025-11-12)
+-------------------
+
+- bin/guard.py: Skip unsupported certificates for FIPS-CC mode. #8
+
+- Use V4 All Certificate Information CSV
+  (AllCertificateRecordsCSVFormatv4).
+
+- bin/chainring.py: Allow partial fingerprint for SHA-256 lookup.
+
+- README.rst: Add pan-chainguard-content.
+
 0.11.0 (2025-10-07)
 -------------------
 
