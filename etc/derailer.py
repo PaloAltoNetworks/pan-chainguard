@@ -26,7 +26,7 @@ import os
 from pathlib import Path
 import re
 import sys
-from typing import Optional
+from typing import Optional, Tuple
 import warnings
 
 try:
@@ -69,11 +69,17 @@ async def main_loop():
     vendors_ = set(args.vendor)
     timeout = aiohttp.ClientTimeout(total=DOWNLOAD_TIMEOUT)
 
+    urls = set([x.url for vendor in vendors_
+                for x in vendors[vendor]])
+    urls = list(urls)
     async with aiohttp.ClientSession(timeout=timeout) as session:
-        urls = set([x.url for vendor in vendors_
-                    for x in vendors[vendor]])
         tasks = [download(session, url) for url in urls]
-        await asyncio.gather(*tasks)
+        results = await asyncio.gather(*tasks)
+    for idx, url in enumerate(urls):
+        downloads[url] = results[idx]
+        ok, r = downloads[url]
+        if ok and args.verbose:
+            print(f'Downloaded {len(r)} bytes from {url}')
 
     if args.debug > 1:
         for x in downloads:
@@ -115,26 +121,25 @@ async def main_loop():
                               f'(SHA256 {digest}) to {path}')
 
 
-async def download(session, url):
+async def download(
+        session: aiohttp.ClientSession,
+        url: str
+) -> Tuple[bool, str]:
     try:
         async with session.get(url) as response:
             if response.status != 200:
-                x = (f'Error: status code {response.status}')
-                downloads[url] = False, x
-                return
+                return False, f'Error: status code {response.status}'
 
             content = await response.text()
-            if args.verbose:
-                print(f'Downloaded {len(content)} bytes from {url}')
-            downloads[url] = True, content
+            return True, content
 
     except (aiohttp.ClientError, asyncio.TimeoutError) as e:
-        x = 'Request failed: ' + (str(e) or type(e).__name__)
-        downloads[url] = False, x
+        msg = str(e) or type(e).__name__
+        return False, f'Request failed: {msg}'
     except Exception as e:
         msg = str(e)
-        x = f'Unexpected {type(e).__name__}' + (': ' + msg if msg else '')
-        downloads[url] = False, x
+        detail = f': {msg}' if msg else ''
+        return False, f'Unexpected {type(e).__name__}{detail}'
 
 
 def pem_cert_fingerprint(data: bytes) -> Optional[str]:
@@ -278,12 +283,12 @@ def set_url(url):
          'AllIncludedRootCertsCSV')
 def mozilla_0() -> Optional[list]:
     url = mozilla_0.url
-    r, data = downloads[url]
-    if not r:
-        print(f'{mozilla_0.__name__}: {data}', file=sys.stderr)
+    ok, r = downloads[url]
+    if not ok:
+        print(f'{mozilla_0.__name__}: {r}', file=sys.stderr)
         return
 
-    reader = csv.DictReader(data.splitlines())
+    reader = csv.DictReader(r.splitlines())
 
     fingerprints = []
     for row in reader:
@@ -297,12 +302,12 @@ def mozilla_0() -> Optional[list]:
          'IncludedRootsDistrustTLSSSLPEMCSV?TrustBitsInclude=Websites')
 def mozilla_1() -> Optional[list]:
     url = mozilla_1.url
-    r, data = downloads[url]
-    if not r:
-        print(f'{mozilla_1.__name__}: {data}', file=sys.stderr)
+    ok, r = downloads[url]
+    if not ok:
+        print(f'{mozilla_1.__name__}: {r}', file=sys.stderr)
         return
 
-    reader = csv.DictReader(data.splitlines())
+    reader = csv.DictReader(r.splitlines())
 
     fingerprints = []
     for row in reader:
@@ -319,12 +324,12 @@ def mozilla_1() -> Optional[list]:
          'AllIncludedRootCertsCSV')
 def microsoft_0() -> Optional[list]:
     url = microsoft_0.url
-    r, data = downloads[url]
-    if not r:
-        print(f'{microsoft_0.__name__}: {data}', file=sys.stderr)
+    ok, r = downloads[url]
+    if not ok:
+        print(f'{microsoft_0.__name__}: {r}', file=sys.stderr)
         return
 
-    reader = csv.DictReader(data.splitlines())
+    reader = csv.DictReader(r.splitlines())
 
     fingerprints = []
     for row in reader:
@@ -338,12 +343,12 @@ def microsoft_0() -> Optional[list]:
          'IncludedRootsPEMCSVForMSFT?MicrosoftEKUs=Server Authentication')
 def microsoft_1() -> Optional[list]:
     url = microsoft_1.url
-    r, data = downloads[url]
-    if not r:
-        print(f'{microsoft_1.__name__}: {data}', file=sys.stderr)
+    ok, r = downloads[url]
+    if not ok:
+        print(f'{microsoft_1.__name__}: {r}', file=sys.stderr)
         return
 
-    reader = csv.DictReader(data.splitlines())
+    reader = csv.DictReader(r.splitlines())
 
     fingerprints = []
     for row in reader:
@@ -360,12 +365,12 @@ def microsoft_1() -> Optional[list]:
          'IncludedCACertificateReportForMSFTCSV')
 def microsoft_2() -> Optional[list]:
     url = microsoft_2.url
-    r, data = downloads[url]
-    if not r:
-        print(f'{microsoft_2.__name__}: {data}', file=sys.stderr)
+    ok, r = downloads[url]
+    if not ok:
+        print(f'{microsoft_2.__name__}: {r}', file=sys.stderr)
         return
 
-    reader = csv.DictReader(data.splitlines())
+    reader = csv.DictReader(r.splitlines())
 
     fingerprints = []
     for row in reader:
@@ -385,12 +390,12 @@ def microsoft_2() -> Optional[list]:
          'AllIncludedRootCertsCSV')
 def chrome_0() -> Optional[list]:
     url = chrome_0.url
-    r, data = downloads[url]
-    if not r:
-        print(f'{chrome_0.__name__}: {data}', file=sys.stderr)
+    ok, r = downloads[url]
+    if not ok:
+        print(f'{chrome_0.__name__}: {r}', file=sys.stderr)
         return
 
-    reader = csv.DictReader(data.splitlines())
+    reader = csv.DictReader(r.splitlines())
 
     fingerprints = []
     for row in reader:
@@ -404,16 +409,16 @@ def chrome_0() -> Optional[list]:
          'main/net/data/ssl/chrome_root_store/root_store.certs')
 def chrome_1() -> Optional[list]:
     url = chrome_1.url
-    r, data = downloads[url]
-    if not r:
-        print(f'{chrome_1.__name__}: {data}', file=sys.stderr)
+    ok, r = downloads[url]
+    if not ok:
+        print(f'{chrome_1.__name__}: {r}', file=sys.stderr)
         return
 
     PEM_PATTERN = re.compile(
         r'-----BEGIN CERTIFICATE-----(.*?)-----END CERTIFICATE-----',
         re.DOTALL
     )
-    matches = PEM_PATTERN.findall(data)
+    matches = PEM_PATTERN.findall(r)
     certs = [
         f'-----BEGIN CERTIFICATE-----{m}-----END CERTIFICATE-----'
         for m in matches
@@ -432,12 +437,12 @@ def chrome_1() -> Optional[list]:
          'AllIncludedRootCertsCSV')
 def apple_0() -> Optional[list]:
     url = apple_0.url
-    r, data = downloads[url]
-    if not r:
-        print(f'{apple_0.__name__}: {data}', file=sys.stderr)
+    ok, r = downloads[url]
+    if not ok:
+        print(f'{apple_0.__name__}: {r}', file=sys.stderr)
         return
 
-    reader = csv.DictReader(data.splitlines())
+    reader = csv.DictReader(r.splitlines())
 
     fingerprints = []
     for row in reader:
