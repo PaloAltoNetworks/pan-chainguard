@@ -168,10 +168,21 @@ def pem_cert_fingerprint(data: bytes) -> Optional[str]:
 
 def load_ccadb(path):
     ccadb = defaultdict(list)
+    EXPECTED = {  # subset
+        'Certificate Record Type',
+        'SHA-256 Fingerprint',
+    }
+
     try:
         with open(path, 'r', newline='') as csvfile:
             reader = csv.DictReader(csvfile,
                                     dialect='unix')
+            fieldnames = set(reader.fieldnames or [])
+            missing = EXPECTED - fieldnames
+            if missing:
+                print('%s: Invalid CSV' % path, file=sys.stderr)
+                sys.exit(1)
+
             for row in reader:
                 sha256 = row['SHA-256 Fingerprint']
                 ccadb[sha256].append(row)

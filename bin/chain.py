@@ -79,11 +79,21 @@ def get_certs(onecrl):
     warning = {}
     certs = {}
     duplicates = defaultdict(list)
+    EXPECTED = {  # subset
+        'Certificate Record Type',
+        'SHA-256 Fingerprint',
+    }
 
     try:
         with open(args.ccadb, 'r', newline='') as csvfile:
             reader = csv.DictReader(csvfile,
                                     dialect='unix')
+            fieldnames = set(reader.fieldnames or [])
+            missing = EXPECTED - fieldnames
+            if missing:
+                print('%s: Invalid CSV' % args.ccadb, file=sys.stderr)
+                sys.exit(1)
+
             for row in reader:
                 sha256 = row['SHA-256 Fingerprint']
                 name = row['Certificate Name']

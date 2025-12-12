@@ -217,11 +217,21 @@ class CcadbRootTrustSettings:
                  debug: bool = False):
         self._certs = {}
         self._debug = debug
+        EXPECTED = {  # subset
+            'Google Chrome Status',
+            'Microsoft EKUs',
+            'SHA-256 Fingerprint',
+        }
 
         try:
             with open(path, 'r', newline='') as csvfile:
                 reader = csv.DictReader(csvfile,
                                         dialect='unix')
+                fieldnames = set(reader.fieldnames or [])
+                missing = EXPECTED - fieldnames
+                if missing:
+                    raise CcadbError('Invalid CSV')
+
                 for row in reader:
                     sha256 = row['SHA-256 Fingerprint']
                     if self._debug and sha256 in self.certs:

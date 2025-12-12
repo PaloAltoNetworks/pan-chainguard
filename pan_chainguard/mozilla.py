@@ -95,11 +95,21 @@ class MozillaOneCrl:
                  path: str,
                  debug: bool = False):
         self.certs = {}
+        EXPECTED = {  # subset
+            'OneCRL Bug Number',
+            'Comments',
+            'SHA-256 Fingerprint',
+        }
 
         try:
             with open(path, 'r', newline='') as csvfile:
                 reader = csv.DictReader(csvfile,
                                         dialect='unix')
+                fieldnames = set(reader.fieldnames or [])
+                missing = EXPECTED - fieldnames
+                if missing:
+                    raise MozillaError('Invalid CSV')
+
                 for row in reader:
                     sha256 = row['SHA-256 Fingerprint']
                     if sha256 in self.certs and debug:

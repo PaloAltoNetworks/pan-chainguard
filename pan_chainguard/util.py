@@ -27,6 +27,10 @@ from typing import Union
 NAME_PREFIX = 'LINK-'
 NAME_RE = r'^%s%s$' % (NAME_PREFIX, '[A-F0-9]{26,26}')
 NAME_RE_COMPAT = r'^(\d{4,4}|LINK)-[0-9A-F]{26,26}$'
+FIELDNAMES_FINGERPRINTS = [
+    'type',
+    'sha256',
+]
 
 
 class UtilError(Exception):
@@ -112,6 +116,10 @@ def read_fingerprints(*, path: str) -> list[dict[str, str]]:
         with open(path, 'r', newline='') as csvfile:
             reader = csv.DictReader(csvfile,
                                     dialect='unix')
+            fieldnames = set(reader.fieldnames or [])
+            if fieldnames != set(FIELDNAMES_FINGERPRINTS):
+                raise UtilError('Invalid CSV')
+
             x = []
             for row in reader:
                 x.append(row)
@@ -122,16 +130,11 @@ def read_fingerprints(*, path: str) -> list[dict[str, str]]:
 
 
 def write_fingerprints(*, path: str, data: list[dict[str, str]]):
-    fieldnames = [
-        'type',
-        'sha256',
-    ]
-
     try:
         with open(path, 'w', newline='') as csvfile:
             writer = csv.DictWriter(csvfile,
                                     dialect='unix',
-                                    fieldnames=fieldnames)
+                                    fieldnames=FIELDNAMES_FINGERPRINTS)
             writer.writeheader()
             for x in data:
                 row = {

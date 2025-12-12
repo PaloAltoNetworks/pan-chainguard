@@ -89,11 +89,21 @@ async def main_loop():
 
 def read_certs():
     certs = {}
+    EXPECTED = {  # subset
+        'Certificate Record Type',
+        'SHA-256 Fingerprint',
+    }
 
     try:
         with open(args.ccadb, 'r', newline='') as csvfile:
             reader = csv.DictReader(csvfile,
                                     dialect='unix')
+            fieldnames = set(reader.fieldnames or [])
+            missing = EXPECTED - fieldnames
+            if missing:
+                print('%s: Invalid CSV' % args.ccadb, file=sys.stderr)
+                sys.exit(1)
+
             for row in reader:
                 if row['Certificate Record Type'] != 'Root Certificate':
                     continue
