@@ -331,6 +331,28 @@ def mozilla_1() -> Optional[list]:
     return fingerprints
 
 
+# https://wiki.mozilla.org/CA/Included_Certificates
+# Included Root CA Certificates (CSV)
+@set_url('https://ccadb.my.salesforce-sites.com/mozilla/'
+         'IncludedRootCertificateReportCSVFormat')
+def mozilla_2() -> Optional[list]:
+    url = mozilla_2.url
+    ok, r = downloads[url]
+    if not ok:
+        print(f'{mozilla_2.__name__}: {r}', file=sys.stderr)
+        return
+
+    reader = csv.DictReader(r.splitlines())
+
+    fingerprints = []
+    for row in reader:
+        trust_bits = row['Trust Bits'].split(';')
+        if 'Websites' in trust_bits:
+            fingerprints.append(row['SHA-256 Fingerprint'])
+
+    return fingerprints
+
+
 @set_url('https://ccadb.my.salesforce-sites.com/ccadb/'
          'AllIncludedRootCertsCSV')
 def microsoft_0() -> Optional[list]:
@@ -464,7 +486,7 @@ def apple_0() -> Optional[list]:
 
 
 vendors = {
-    'mozilla': [mozilla_0, mozilla_1],
+    'mozilla': [mozilla_0, mozilla_1, mozilla_2],
     'microsoft': [microsoft_0, microsoft_1, microsoft_2],
     'chrome': [chrome_0, chrome_1],
     'apple': [apple_0],
