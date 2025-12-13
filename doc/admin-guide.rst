@@ -1190,23 +1190,14 @@ References
 - `PAN-OS Repair Incomplete Certificate Chains
   <https://docs.paloaltonetworks.com/pan-os/11-1/pan-os-admin/decryption/troubleshoot-and-monitor-decryption/decryption-logs/repair-incomplete-certificate-chains>`_
 
-- `pan-chainguard GitHub Repository
-  <https://github.com/PaloAltoNetworks/pan-chainguard>`_
-
-- `pan-chainguard-content GitHub Repository
-  <https://github.com/PaloAltoNetworks/pan-chainguard-content>`_
-
 - `Common CA Database - Useful Resources
   <https://www.ccadb.org/resources>`_
-
-- `pan-python
-  <https://github.com/kevinsteves/pan-python>`_
 
 - `Firefox Intermediate CA Preloading
   <https://wiki.mozilla.org/Security/CryptoEngineering/Intermediate_Preloading>`_
 
-- `crt.sh API Usage
-  <https://groups.google.com/g/crtsh/c/puZMuqBaWOE>`_
+- `Mozilla CA/Included Certificates
+  <https://wiki.mozilla.org/CA/Included_Certificates>`_
 
 - `Mozilla CA/Intermediate Certificates
   <https://wiki.mozilla.org/CA/Intermediate_Certificates>`_
@@ -1216,3 +1207,15 @@ References
 
 - `Mozilla Root Store Policy
   <https://www.mozilla.org/en-US/about/governance/policies/security-group/certs/policy/>`_
+
+- `pan-python
+  <https://github.com/kevinsteves/pan-python>`_
+
+- `pan-chainguard GitHub Repository
+  <https://github.com/PaloAltoNetworks/pan-chainguard>`_
+
+- `pan-chainguard-content GitHub Repository
+  <https://github.com/PaloAltoNetworks/pan-chainguard-content>`_
+
+- `crt.sh API Usage
+  <https://groups.google.com/g/crtsh/c/puZMuqBaWOE>`_
