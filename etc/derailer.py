@@ -308,7 +308,9 @@ def mozilla_0() -> Optional[list]:
 
     return fingerprints
 
-
+# https://wiki.mozilla.org/CA/Included_Certificates
+# PEM of Root Certificates in Mozilla's Root Store with the
+# Websites (TLS/SSL) Trust Bit Enabled (CSV)
 @set_url('https://ccadb.my.salesforce-sites.com/mozilla/'
          'IncludedRootsDistrustTLSSSLPEMCSV?TrustBitsInclude=Websites')
 def mozilla_1() -> Optional[list]:
