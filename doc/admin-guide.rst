@@ -169,12 +169,12 @@ pan-chainguard Command Line Programs
 ``pan-chainguard`` provides 6 Python command line programs and a shell
 script:
 
-- ``fling.py``
+- ``fling.py`` - Deprecated
 
   Command line program which exports the PEM encoded X.509
   certificates from the PAN-OS Default Trusted CA store.
 
-- ``cert-fingerprints.sh``
+- ``cert-fingerprints.sh`` - Deprecated
 
   A shell script which takes as input the X.509 certificates
   exported by ``fling.py`` and creates a CSV file containing
