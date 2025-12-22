@@ -142,20 +142,19 @@ async def download(
         return False, f'Unexpected {type(e).__name__}{detail}'
 
 
-def pem_cert_fingerprint(data: bytes) -> Optional[str]:
+def load_pem_cert(data: bytes) -> Optional[x509.Certificate]:
     try:
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter('always')
             cert = x509.load_pem_x509_certificate(data)
+
+        if w and args.debug:
             sha256 = cert.fingerprint(hashes.SHA256()).hex().upper()
-
-        if args.debug:
             for warn in w:
-                print(f'{warn.category.__name__}: {warn.message}',
+                print(f'{warn.category.__name__}: {sha256}: {warn.message}',
                       file=sys.stderr)
-                print('SHA256', sha256, file=sys.stderr)
 
-        return sha256
+        return cert
 
     except Exception as e:
         # Future-proof: cryptography may raise instead of warn
@@ -164,6 +163,15 @@ def pem_cert_fingerprint(data: bytes) -> Optional[str]:
         print('Failed to load cert. PEM blob SHA256', pem_sha256,
               file=sys.stderr)
         return
+
+
+def pem_cert_fingerprint(data: bytes) -> Optional[str]:
+    cert = load_pem_cert(data)
+    if cert is None:
+        return
+
+    sha256 = cert.fingerprint(hashes.SHA256()).hex().upper()
+    return sha256
 
 
 def load_ccadb(path):
