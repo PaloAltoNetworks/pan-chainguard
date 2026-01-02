@@ -266,17 +266,17 @@ def test_collisions(tree):
 
 
 def lookup(tree, sha256):
-    nodes = []
+    s = sha256.strip()
+    if s.startswith(pan_chainguard.util.NAME_PREFIX):
+        s = s[len(pan_chainguard.util.NAME_PREFIX):]
+    s = s.upper()
 
+    nodes = []
     if len(sha256) == 64:
         node = tree.get_node(sha256)
         if node is not None:
             nodes.append(node)
     else:
-        s = sha256
-        if s.startswith(pan_chainguard.util.NAME_PREFIX):
-            s = s[len(pan_chainguard.util.NAME_PREFIX):]
-        s = s.upper()
         matches = tree.filter_nodes(
             lambda n: (isinstance(n.identifier, str) and
                        s in n.identifier)
