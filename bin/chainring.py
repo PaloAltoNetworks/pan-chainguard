@@ -272,8 +272,8 @@ def lookup(tree, sha256):
     s = s.upper()
 
     nodes = []
-    if len(sha256) == 64:
-        node = tree.get_node(sha256)
+    if len(s) == 64:
+        node = tree.get_node(s)
         if node is not None:
             nodes.append(node)
     else:
