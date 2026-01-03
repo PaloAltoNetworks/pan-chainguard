@@ -25,6 +25,8 @@ import json
 import os
 import pprint
 import sys
+from treelib import Tree
+
 
 libpath = os.path.dirname(os.path.abspath(__file__))
 sys.path[:0] = [os.path.join(libpath, os.pardir)]
@@ -201,6 +203,9 @@ def main():
 async def main_loop():
     tree = read_tree()
 
+    if args.depth is not None:
+        tree = tree_max_depth(tree, args.depth)
+
     if args.test_collisions:
         if not test_collisions(tree):
             return 1
@@ -232,6 +237,23 @@ def read_tree():
         sys.exit(1)
 
     return tree
+
+
+def tree_max_depth(tree: Tree, max_depth: int) -> Tree:
+    assert max_depth >= 0, 'max_depth must be >= 0'
+
+    new_tree = Tree(tree, deep=True)
+
+    # remove nodes deeper than max_depth
+    for nid in list(new_tree.expand_tree(mode=Tree.DEPTH)):
+        node = new_tree.get_node(nid)
+        if node is None:
+            # node removed as part of an ancestor subtree
+            continue
+        if new_tree.depth(nid) > max_depth:
+            new_tree.remove_node(nid)
+
+    return new_tree
 
 
 # The first 26 characters of the SHA-256 fingerprint (length 64) are
@@ -290,6 +312,17 @@ def lookup(tree, sha256):
 
 
 def parse_args():
+    def non_negative_int(value: str) -> int:
+        try:
+            n = int(value)
+        except ValueError:
+            raise argparse.ArgumentTypeError(
+                f'invalid integer value: {value!r}')
+        if n < 0:
+            raise argparse.ArgumentTypeError(
+                'must be an integer >= 0')
+        return n
+
     parser = argparse.ArgumentParser(
         usage='%(prog)s [options]',
         description='certificate tree analysis and reporting',
@@ -313,6 +346,9 @@ def parse_args():
                         help='''\
 lookup CCADB data by certificate SHA-256 fingerprint
 (partial fingerprint allowed)''')
+    parser.add_argument('--depth',
+                        type=non_negative_int,
+                        help='maximum tree depth')
     parser.add_argument('--verbose',
                         action='store_true',
                         help='enable verbosity')

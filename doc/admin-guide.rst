@@ -630,6 +630,8 @@ chainring.py
 + Lookup CCADB data by full or partial certificate SHA-256 fingerprint,
   including ``pan-chainguard`` managed **LINK-** certificate names
 
++ Prune the certificate tree to a maximum depth
+
 chainring.py Usage
 ..................
 
@@ -651,6 +653,7 @@ chainring.py Usage
      -F SHA-256, --fingerprint SHA-256
                            lookup CCADB data by certificate SHA-256 fingerprint
                            (partial fingerprint allowed)
+     --depth DEPTH         maximum tree depth
      --verbose             enable verbosity
      --debug {0,1,2,3}     enable debug
      --version             display version
