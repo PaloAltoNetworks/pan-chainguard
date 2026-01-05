@@ -126,8 +126,8 @@ It requires the following Python packages:
 + `treelib <https://github.com/caesar0301/treelib>`_
 
 ``pan-chainguard`` should run on any Unix system with Python 3.9 or
-greater, and OpenSSL or LibreSSL; it has been tested on OpenBSD 7.6,
-Ubuntu 22.04 and 24.04, and macOS 14.
+greater, and OpenSSL or LibreSSL; it has been tested on OpenBSD 7.8,
+Ubuntu 22.04 and 24.04, and macOS 14 and 15.
 
 Get pan-chainguard using ``git clone``
 ......................................
