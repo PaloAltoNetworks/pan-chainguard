@@ -80,6 +80,10 @@ async def main_loop():
     if args.show:
         show(certs)
 
+    if args.filter:
+        for filter in args.filter:
+            certs = apply_filter(certs, FILTERS[filter], filter)
+
     if args.certs_new:
         data = {d['sha256']: (d['type'], d['_content']) for d in certs}
         try:
@@ -381,6 +385,55 @@ def warning_cert_context(
         _current_cert_id.reset(token)
 
 
+def filter_none(cert):
+    return True, None
+
+
+# FIPS 186-4, 186-5
+def filter_fips(cert):
+    msg = []
+    ok = True
+
+    if cert['public_key_algorithm'] == 'RSA':
+        e = cert['exponent']
+        if not e > 2**16:
+            msg.append(f'RSA exponent not > {2**16}: {e}')
+            ok = False
+        if e % 2 == 0:
+            msg.append(f'RSA exponent not odd: {e}')
+            ok = False
+
+    if not ok:
+        return ok, ', '.join(msg)
+
+    return ok, None
+
+
+def apply_filter(certs, check, name):
+    filtered = 0
+    out = []
+
+    for cert in certs:
+        ok, res = check(cert)
+        if ok:
+            out.append(cert)
+        else:
+            filtered += 1
+            if args.verbose:
+                print(f"{name} {cert['sha256']}: {res}", file=sys.stderr)
+
+    if args.verbose and filtered:
+        print(f"{name} filtered {filtered} certificates", file=sys.stderr)
+
+    return out
+
+
+FILTERS = {
+    'none': filter_none,
+    'fips-cc': filter_fips,
+}
+
+
 def parse_args():
     parser = argparse.ArgumentParser(
         usage='%(prog)s [options]',
@@ -405,6 +458,10 @@ def parse_args():
     parser.add_argument('--show-dups',
                         action='store_true',
                         help='show certificates with duplicate public key')
+    parser.add_argument('-f', '--filter',
+                        action='append',
+                        choices=FILTERS.keys(),
+                        help='output filter(s)')
     parser.add_argument('--verbose',
                         action='store_true',
                         help='enable verbosity')
