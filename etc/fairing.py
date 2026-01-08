@@ -148,19 +148,7 @@ def get_certs(path):
             }
 
             x.update(pubkey_info(cert))
-
-            x['subject_key_identifier'] = None
-            try:
-                ski = cert.extensions.get_extension_for_class(
-                    x509.SubjectKeyIdentifier).value
-                x['subject_key_identifier'] = ski.digest.hex()
-            except ValueError as e:
-                print('%s: %s: %s' % (type(e).__name__, sha256, e),
-                      file=sys.stderr)
-            except x509.ExtensionNotFound:
-                if args.verbose:
-                    print('%s: No Subject Key Identifier' % sha256,
-                          file=sys.stderr)
+            x.update(extensions(cert))
 
         certs.append(x)
 
@@ -203,6 +191,42 @@ def pubkey_info(cert: x509.Certificate) -> dict:
             print('%s: Unknown key algorithm: %s' % (
                 fingerprint_sha256(cert), pubkey_name),
                 file=sys.stderr)
+
+    return x
+
+
+def extensions(cert: x509.Certificate) -> dict:
+    def fmt_basic_constraints(bc: x509.BasicConstraints) -> str:
+        ca = 'TRUE' if bc.ca else 'FALSE'
+        pl = bc.path_length
+        pathlen = f', pathlen:{pl}' if pl is not None else ''
+        return f'CA:{ca}{pathlen}'
+
+    EXTS = {
+        x509.SubjectKeyIdentifier: ('subject_key_identifier',
+                                    'Subject Key Identifier',
+                                    lambda v: v.digest.hex()),
+        x509.BasicConstraints: ('basic_constraints',
+                                'Basic Constraints',
+                                fmt_basic_constraints),
+    }
+
+    x = {v[0]: None for v in EXTS.values()}
+
+    for extcls, (key, label, formatter) in EXTS.items():
+        try:
+            value = cert.extensions.get_extension_for_class(extcls).value
+        except x509.ExtensionNotFound:
+            if args.verbose:
+                print(f'{fingerprint_sha256(cert)}: No {label}',
+                      file=sys.stderr)
+            continue
+        except x509.DuplicateExtension as e:
+            print(f'{fingerprint_sha256(cert)}: Duplicate {label}: {e}',
+                  file=sys.stderr)
+            continue
+
+        x[key] = formatter(value)
 
     return x
 
