@@ -196,24 +196,38 @@ def pubkey_info(cert: x509.Certificate) -> dict:
 
 
 def extensions(cert: x509.Certificate) -> dict:
-    def fmt_basic_constraints(bc: x509.BasicConstraints) -> str:
+    def basic_constraints_pathlen(bc: x509.BasicConstraints) -> Optional[int]:
+        return bc.path_length
+
+    def basic_constraints(bc: x509.BasicConstraints) -> str:
         ca = 'TRUE' if bc.ca else 'FALSE'
         pl = bc.path_length
         pathlen = f', pathlen:{pl}' if pl is not None else ''
         return f'CA:{ca}{pathlen}'
 
     EXTS = {
-        x509.SubjectKeyIdentifier: ('subject_key_identifier',
-                                    'Subject Key Identifier',
-                                    lambda v: v.digest.hex()),
-        x509.BasicConstraints: ('basic_constraints',
-                                'Basic Constraints',
-                                fmt_basic_constraints),
+        x509.SubjectKeyIdentifier: (
+            'Subject Key Identifier', [
+                ('subject_key_identifier', lambda v: v.digest.hex()),
+            ],
+        ),
+        x509.BasicConstraints: (
+            'Basic Constraints', [
+                ('basic_constraints', basic_constraints),
+                ('_basic_constraints_pathlen',
+                 basic_constraints_pathlen),
+            ],
+        ),
     }
 
-    x = {v[0]: None for v in EXTS.values()}
+    x = {
+        name: None
+        for _ext_cls, (_label, items) in EXTS.items()
+        for (name, _func) in items
+    }
 
-    for extcls, (key, label, formatter) in EXTS.items():
+    for extcls, v in EXTS.items():
+        label = v[0]
         try:
             value = cert.extensions.get_extension_for_class(extcls).value
         except x509.ExtensionNotFound:
@@ -226,7 +240,8 @@ def extensions(cert: x509.Certificate) -> dict:
                   file=sys.stderr)
             continue
 
-        x[key] = formatter(value)
+        for name, func in v[1]:
+            x[name] = func(value)
 
     return x
 
@@ -264,6 +279,8 @@ def stats(certs):
             x['total_no_common_name'] += 1
         if d['subject_key_identifier'] is None:
             x['total_no_subject_key_identifier'] += 1
+        x[f'basic_constraints_pathlen '
+          f"{d['_basic_constraints_pathlen']}"] += 1
 
     dups = pubkey_duplicates(certs)
     x['total_public_key_duplicates'] = len(dups)
