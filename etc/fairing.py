@@ -115,10 +115,10 @@ def get_certs(path):
             if cert is None:
                 continue
 
-        fp = fingerprint_sha256(cert)
-        if sha256 != fp:
-            print('%s: cert filename does not match content SHA256: %s' % (
-                sha256, fp), file=sys.stderr)
+            fp = fingerprint_sha256(cert)
+            if sha256 != fp:
+                print('%s: cert filename does not match content SHA256: %s' % (
+                    sha256, fp), file=sys.stderr)
 
         with warning_cert_context(cert_fingerprint=fp):
             common_name_ = common_name(cert.subject)
