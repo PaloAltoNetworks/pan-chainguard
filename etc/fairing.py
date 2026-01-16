@@ -150,8 +150,7 @@ def get_certs(path):
 
             x.update(pubkey_info(cert))
             x.update(extensions(cert))
-
-        certs.append(x)
+            certs.append(x)
 
     return certs
 
