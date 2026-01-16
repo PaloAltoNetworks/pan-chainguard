@@ -85,7 +85,8 @@ async def main_loop():
             certs = apply_filter(certs, FILTERS[filter], filter)
 
     if args.certs_new:
-        data = {d['sha256']: (d['type'], d['_content']) for d in certs}
+        data = {d['cert_fingerprint_sha256']: (d['cert_type'], d['_content'])
+                for d in certs}
         try:
             pan_chainguard.util.write_cert_archive(
                 path=args.certs_new, data=data)
@@ -131,12 +132,12 @@ def get_certs(path):
                     file=sys.stderr)
 
             x = {
-                'sha256': sha256,
-                'type': cert_type,
+                'cert_fingerprint_sha256': sha256,
+                'cert_type': cert_type,
                 '_content': content,
                 #  '_cert': cert,
-                'pubkey_der_hash_hexdigest': pubkey_der_hash_hexdigest(cert),
-                'der_hash_b64': der_hash_b64(cert),
+                'cert_spki_sha256': spki_sha256(cert),
+                'cert_der_sha256_b64': der_sha256_b64(cert),
                 'signature_algorithm': cert.signature_algorithm_oid._name,
                 'signature_hash_algorithm': cert.signature_hash_algorithm.name,
                 'subject': cert.subject.rfc4514_string(),
@@ -171,12 +172,12 @@ def pubkey_info(cert: x509.Certificate) -> dict:
     if isinstance(pubkey, rsa.RSAPublicKey):
         numbers = pubkey.public_numbers()
         x['public_key_algorithm'] = 'RSA'
-        x['public_key_length'] = numbers.n.bit_length()
-        x['exponent'] = numbers.e
+        x['modulus_bits'] = numbers.n.bit_length()
+        x['public_exponent'] = numbers.e
 
     elif isinstance(pubkey, ec.EllipticCurvePublicKey):
         x['public_key_algorithm'] = 'EC'
-        x['public_key_length'] = pubkey.curve.key_size
+        x['curve_bits'] = pubkey.curve.key_size
         x['curve_name'] = pubkey.curve.name
 
     elif isinstance(pubkey, dsa.DSAPublicKey):
@@ -235,7 +236,7 @@ def pubkey_duplicates(certs):
     src = defaultdict(list)
 
     for d in certs:
-        src[d['pubkey_der_hash_hexdigest']].append(d)
+        src[d['cert_spki_sha256']].append(d)
 
     dups = {k: lst for k, lst in src.items() if len(lst) > 1}
 
@@ -247,11 +248,11 @@ def stats(certs):
 
     for d in certs:
         x['total_certificates'] += 1
-        x[f'total_{d['type']}_certificates'] += 1
+        x[f'total_{d['cert_type']}_certificates'] += 1
         x[f"public_key_algorithm {d['public_key_algorithm']}"] += 1
         x[f"signature_algorithm {d['signature_algorithm']}"] += 1
-        if 'exponent' in d:
-            x[f"rsa_exponent {d['exponent']}"] += 1
+        if 'public_exponent' in d:
+            x[f"rsa_public_exponent {d['public_exponent']}"] += 1
         if 'curve_name' in d:
             x[f"ec_curve {d['curve_name']}"] += 1
         if d['serial_number'] <= 0:
@@ -272,9 +273,10 @@ def stats(certs):
 def show_dups(certs):
     dups = pubkey_duplicates(certs)
     for k in dups:
-        print(f'pubkey_der_hash_hexdigest={k}')
+        print(f'cert_spki_sha256={k}')
         for c in dups[k]:
-            print(f"    sha256={c['sha256']}")
+            fp = 'cert_fingerprint_sha256'
+            print(f'    {fp}={c[fp]}')
 
     if args.verbose:
         dups = [v for lst in dups.values() for v in lst]
@@ -337,7 +339,7 @@ def pubkey_der(cert: x509.Certificate) -> bytes:
 # openssl x509 -in cert.pem -pubkey -noout |
 #   openssl pkey -pubin -outform DER |
 #   openssl dgst -sha256
-def pubkey_der_hash_hexdigest(cert: x509.Certificate) -> str:
+def spki_sha256(cert: x509.Certificate) -> str:
     pubkey = pubkey_der(cert)
     return hashlib.sha256(pubkey).hexdigest()
 
@@ -348,7 +350,7 @@ def pubkey_der_hash_hexdigest(cert: x509.Certificate) -> str:
 # openssl x509 -in cert.pem -outform der |
 #   openssl dgst -sha256 -binary |
 #   openssl base64
-def der_hash_b64(cert: x509.Certificate) -> str:
+def der_sha256_b64(cert: x509.Certificate) -> str:
     der_data = cert.public_bytes(encoding=serialization.Encoding.DER)
     sha256_hash = hashlib.sha256(der_data).digest()
     return base64.b64encode(sha256_hash).decode('ascii')
@@ -419,12 +421,12 @@ def filter_fips(cert):
     ok = True
 
     if cert['public_key_algorithm'] == 'RSA':
-        e = cert['exponent']
+        e = cert['public_exponent']
         if not e > 2**16:
-            msg.append(f'RSA exponent not > {2**16}: {e}')
+            msg.append(f'RSA public exponent not > {2**16}: {e}')
             ok = False
         if e % 2 == 0:
-            msg.append(f'RSA exponent not odd: {e}')
+            msg.append(f'RSA public exponent not odd: {e}')
             ok = False
 
     if not ok:
@@ -444,7 +446,8 @@ def apply_filter(certs, check, name):
         else:
             filtered += 1
             if args.verbose:
-                print(f"{name} {cert['sha256']}: {res}", file=sys.stderr)
+                print(f"{name} {cert['cert_fingerprint_sha256']}: {res}",
+                      file=sys.stderr)
 
     if args.verbose and filtered:
         print(f"{name} filtered {filtered} certificates", file=sys.stderr)
