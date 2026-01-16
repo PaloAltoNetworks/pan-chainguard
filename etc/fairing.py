@@ -187,7 +187,7 @@ def pubkey_info(cert: x509.Certificate) -> dict:
                 file=sys.stderr)
     else:
         x['public_key_algorithm'] = pubkey_name
-        if verbose:
+        if args.verbose:
             print('%s: Unknown key algorithm: %s' % (
                 fingerprint_sha256(cert), pubkey_name),
                 file=sys.stderr)
