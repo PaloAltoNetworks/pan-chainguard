@@ -247,7 +247,7 @@ def stats(certs):
 
     for d in certs:
         x['total_certificates'] += 1
-        x[f'total_{d['cert_type']}_certificates'] += 1
+        x[f"total_{d['cert_type']}_certificates"] += 1
         x[f"public_key_algorithm {d['public_key_algorithm']}"] += 1
         x[f"signature_algorithm {d['signature_algorithm']}"] += 1
         if 'public_exponent' in d:
