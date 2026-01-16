@@ -256,7 +256,9 @@ def stats(certs):
         if 'modulus_bits' in d:
             x[f"rsa_modulus_bits {d['modulus_bits']}"] += 1
         if 'curve_name' in d:
-            x[f"ec_curve {d['curve_name']}"] += 1
+            x[f"ec_curve_name {d['curve_name']}"] += 1
+        if 'curve_bits' in d:
+            x[f"ec_curve_bits {d['curve_bits']}"] += 1
         if d['serial_number'] <= 0:
             x['total_serial_number_not_positive'] += 1
         if d['common_name'] is None:
