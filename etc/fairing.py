@@ -253,6 +253,8 @@ def stats(certs):
         x[f"signature_algorithm {d['signature_algorithm']}"] += 1
         if 'public_exponent' in d:
             x[f"rsa_public_exponent {d['public_exponent']}"] += 1
+        if 'modulus_bits' in d:
+            x[f"rsa_modulus_bits {d['modulus_bits']}"] += 1
         if 'curve_name' in d:
             x[f"ec_curve {d['curve_name']}"] += 1
         if d['serial_number'] <= 0:
