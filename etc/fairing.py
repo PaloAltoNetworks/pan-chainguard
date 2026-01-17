@@ -205,7 +205,18 @@ def extensions(cert: x509.Certificate) -> dict:
         pathlen = f', pathlen:{pl}' if pl is not None else ''
         return f'CA:{ca}{pathlen}'
 
+    def authority_key_identifier_key(
+            aki: x509.AuthorityKeyIdentifier) -> Optional[str]:
+        if aki.key_identifier is None:
+            return
+        return aki.key_identifier.hex()
+
     EXTS = {
+        x509.AuthorityKeyIdentifier: (
+            'Authority Key Identifier', [
+                ('authority_key_identifier', authority_key_identifier_key),
+            ],
+        ),
         x509.SubjectKeyIdentifier: (
             'Subject Key Identifier', [
                 ('subject_key_identifier', lambda v: v.digest.hex()),
@@ -277,6 +288,8 @@ def stats(certs):
             x['total_serial_number_not_positive'] += 1
         if d['common_name'] is None:
             x['total_no_common_name'] += 1
+        if d['authority_key_identifier'] is None:
+            x['total_no_authority_key_identifier'] += 1
         if d['subject_key_identifier'] is None:
             x['total_no_subject_key_identifier'] += 1
         x[f'basic_constraints_pathlen '
