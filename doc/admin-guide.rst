@@ -980,7 +980,7 @@ The use case prerequisites include:
 
 + Set up a `.panrc <pan-chainguard PAN-OS XML API Usage_>`_ file
 
-+ Configure `role based admin <Role Based Admin_>`_
++ Configure a `role based <Role Based Admin_>`_ admin
 
 Use Case 1: Update Out-of-date PAN-OS Root Store - All Vendor Sources
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
