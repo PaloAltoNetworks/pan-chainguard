@@ -507,14 +507,22 @@ vendors['all'] = [x for vendor in vendors
 
 
 def parse_args():
+    def vendor(s: str) -> str:
+        if s not in vendors:
+            raise argparse.ArgumentTypeError(
+                f"invalid choice: {s!r} (choose from {', '.join(vendors)})"
+            )
+        return s
+
     parser = argparse.ArgumentParser(
         usage='%(prog)s [options]',
         description='vendor root CA program analysis')
     parser.add_argument('-V', '--vendor',
+                        metavar='VENDOR',
                         action='append',
                         required=True,
-                        choices=vendors.keys(),
-                        help='vendor')
+                        type=vendor,
+                        help=f"vendor {{{','.join(vendors)}}}")
     parser.add_argument('-s', '--save',
                         metavar='DIR',
                         type=Path,
