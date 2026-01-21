@@ -1017,7 +1017,7 @@ root certificates, which are not used for this use case.
    $ pwd
    /home/ksteves/git/pan-chainguard/tmp
 
-   $ curl -sLO https://raw.githubusercontent.com/PaloAltoNetworks/pan-chainguard-content/main/latest-certs/certificates-new.tgz
+   $ curl -sO https://raw.githubusercontent.com/PaloAltoNetworks/pan-chainguard-content/main/latest-certs/certificates-new.tgz
 
    $ ls -lh certificates-new.tgz
    -rw-r--r--  1 ksteves  ksteves   2.0M Mar 24 11:19 certificates-new.tgz
