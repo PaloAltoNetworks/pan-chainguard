@@ -448,7 +448,10 @@ def filter_none(cert):
     return True, None
 
 
-# FIPS 186-4, 186-5
+# FIPS 186-4
+# https://docs.paloaltonetworks.com/compatibility-matrix/reference/
+#   supported-cipher-suites/cipher-suites-supported-in-pan-os-11-0/
+#   cipher-suites-supported-in-pan-os-11-0-fips-cc
 def filter_fips(cert):
     msg = []
     ok = True
