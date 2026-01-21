@@ -1179,6 +1179,140 @@ Then repeat the certificate archive download and update periodically
 to ensure the root store remains up-to-date.  These subsequent updates
 are performed incrementally, resulting in fast update times.
 
+Utility Programs
+----------------
+
+The ``etc/`` directory contains utility programs:
+
++ ``derailer.py`` - vendor root CA program analysis
+
++ ``fairing.py`` - manage certificate archive
+
+These require the Python
+`cryptography <https://pypi.org/project/cryptography/>`_
+package.
+To use these programs you must first install ``cryptography``:
+
+::
+
+  $ python3 -m pip install cryptography
+
+derailer.py
+~~~~~~~~~~~
+
+``derailer.py`` is a program to assist in performing cross-validation
+via differential testing using various common and vendor specific data
+sources to determine each vendor root store.  These results can be
+compared to the results from ``sprocket.py``.
+
+derailer.py Usage
+.................
+
+::
+
+   $ etc/derailer.py -h
+   usage: derailer.py [options]
+
+   vendor root CA program analysis
+
+   options:
+     -h, --help            show this help message and exit
+     -V VENDOR, --vendor VENDOR
+                           vendor {mozilla,microsoft,chrome,apple,all}
+     -s DIR, --save DIR    save fingerprints to directory
+     -c PATH, --ccadb PATH
+                           CCADB all certificate information CSV path
+     --verbose             enable verbosity
+     --debug {0,1,2,3}     enable debug
+     --version             display version
+
+derailer.py Example
+...................
+
+::
+
+   $ pwd
+   /home/ksteves/git/pan-chainguard/tmp
+
+   $ curl --clobber -sOJ https://ccadb.my.salesforce-sites.com/ccadb/AllCertificateRecordsCSVFormatv4
+
+   $ cd ..
+
+   $ etc/derailer.py -V all -c tmp/AllCertificateRecordsReport.csv
+   mozilla_0: 143 root CAs (2 duplicates)
+   mozilla_1: 143 root CAs (2 duplicates)
+   mozilla_2: 143 root CAs (2 duplicates)
+   microsoft_0: 219 root CAs (2 duplicates, 10 expired)
+   microsoft_1: 219 root CAs (2 duplicates, 10 expired)
+   microsoft_2: 219 root CAs (2 duplicates, 10 expired)
+   chrome_0: 112 root CAs (2 duplicates)
+   chrome_1: 112 root CAs (2 duplicates)
+   apple_0: 120 root CAs (1 duplicates)
+
+fairing.py
+~~~~~~~~~~
+
+``fairing.py`` is used to manage the ``pan-chainguard`` certificate archive.
+
+It can be used to perform the following operations:
+
++ show certificate statistics
+
++ show certificate details
+
++ show certificates with a duplicate public key
+
++ filter certificates by type (root, intermediate)
+
++ filter certificates using a predefined filter (currently ``fips-cc``)
+
++ create a new (filtered) certificate archive
+
+fairing.py Usage
+................
+
+::
+
+   $ etc/fairing.py -h
+   usage: fairing.py [options]
+
+   manage certificate archive
+
+   options:
+     -h, --help            show this help message and exit
+     --certs PATH          certificate archive path
+     --certs-new PATH      new certificate archive path
+     -T {root,intermediate}, --type {root,intermediate}
+                           include certificate type(s)
+     --stats               print certificate stats
+     --show                show certificate details
+     --show-dups           show certificates with duplicate public key
+     -f {none,fips-cc}, --filter {none,fips-cc}
+                           output filter(s)
+     --verbose             enable verbosity
+     --debug {0,1,2,3}     enable debug
+     --version             display version
+
+fairing.py Example
+..................
+
+::
+
+   $ pwd
+   /home/ksteves/git/pan-chainguard
+
+   $ curl -so tmp/certificates-old.tgz https://raw.githubusercontent.com/PaloAltoNetworks/pan-chainguard-content/main/latest-certs/certificates-new.tgz
+
+   $ etc/fairing.py --certs tmp/certificates-old.tgz --stats | grep ^total
+   total_certificates: 2254
+   total_intermediate_certificates: 2030
+   total_no_authority_key_identifier: 155
+   total_no_common_name: 13
+   total_no_subject_key_identifier: 2
+   total_public_key_duplicates: 156
+   total_root_certificates: 224
+   total_serial_number_not_positive: 12
+
 About the Name
 --------------
 
