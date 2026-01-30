@@ -58,7 +58,9 @@ def is_writable(path: str) -> bool:
         return os.access(parent_dir, os.W_OK)
 
 
-def read_cert_archive(*, path: str) -> dict[str, tuple[str, str]]:
+def read_cert_archive(*,
+                      path: str = None,
+                      fileobj=None) -> dict[str, tuple[str, str]]:
     def parse_name(name):
         pat = (r'^(intermediate|root)/'
                r'[0-9A-F]{64,64}\.pem$')
@@ -72,7 +74,7 @@ def read_cert_archive(*, path: str) -> dict[str, tuple[str, str]]:
 
     data = {}
     try:
-        with tarfile.open(name=path, mode='r') as tar:
+        with tarfile.open(name=path, fileobj=fileobj, mode='r') as tar:
             for member in tar:
                 if member.name in ['root', 'intermediate']:
                     continue
