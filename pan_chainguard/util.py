@@ -22,7 +22,7 @@ import re
 import tarfile
 import time
 import treelib
-from typing import Union
+from typing import Optional, Union
 
 NAME_PREFIX = 'LINK-'
 NAME_RE = r'^%s%s$' % (NAME_PREFIX, '[A-F0-9]{26,26}')
@@ -59,8 +59,8 @@ def is_writable(path: str) -> bool:
 
 
 def read_cert_archive(*,
-                      path: str = None,
-                      fileobj=None) -> dict[str, tuple[str, str]]:
+                      path: Optional[str] = None,
+                      fileobj=None) -> dict[str, tuple[str, bytes]]:
     def parse_name(name):
         pat = (r'^(intermediate|root)/'
                r'[0-9A-F]{64,64}\.pem$')
@@ -89,7 +89,9 @@ def read_cert_archive(*,
     return data
 
 
-def write_cert_archive(*, path: str, data: dict[str, tuple[str, str]]):
+def write_cert_archive(*,
+                       path: str,
+                       data: dict[str, tuple[str, Union[str, bytes]]]):
     try:
         with tarfile.open(name=path, mode='w:gz') as tar:
             for k, v in data.items():
