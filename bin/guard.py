@@ -371,7 +371,7 @@ def get_certs(xapi, xpath):
 
     data = {}
     prog = re.compile(NAME_RE)
-    progcn = re.compile(r'/CN=([^/]+)')
+    progcn = re.compile(r'/CN=((?:\\.|[^/\\])*)(?=/|$)')
 
     for entry in entries:
         name = entry.attrib['name']
@@ -380,12 +380,13 @@ def get_certs(xapi, xpath):
             subject_cn = None
             match = progcn.search(subject)
             if match:
-                subject_cn = match.group(1)
+                subject_cn = re.sub(r'\\(.)', r'\1', match.group(1))
             issuer = entry.find('./issuer').text
             issuer_cn = None
             match = progcn.search(issuer)
             if match:
                 issuer_cn = match.group(1)
+                issuer_cn = re.sub(r'\\(.)', r'\1', match.group(1))
             expiry = entry.find('./expiry-epoch').text
             try:
                 if time.time() > int(expiry):
