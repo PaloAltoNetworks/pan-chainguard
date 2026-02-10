@@ -1,17 +1,15 @@
 pan-chainguard To Do List
 =========================
 
-- Verify pan-chainguard derived root store with each vendor list.
-  For Mozilla also verify pan-chainguard intermediates with
-  preloaded list.
+- Add program to perform pan-chainguard and Mozilla intermediate
+  certificate correlation.
 
-- Integrate with SCM API (e.g., SCM capable guard.py).
+- Integrate with SCM API (e.g., new program with guard.py
+  functionality).
 
-- Update admin guide with use cases (e.g., update root store
-  only).
-
-- Optimise XML API usage for increased performance; consider use
-  of multi-config.
+- Update admin guide with steps to verify trust anchor validation on
+  PAN-OS firewall with pan-chainguard deployed (e.g., site with
+  missing intermediate).
 
 - Retry transient XML API errors when possible.
 
