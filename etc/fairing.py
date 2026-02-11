@@ -320,13 +320,13 @@ def show(certs):
     if not len(certs):
         return
 
-    width = max(len(k) for d in certs for k in d)
+    width = max(len(k) for d in certs for k in d if not k.startswith('_'))
 
     for i, d in enumerate(certs):
         if i:
             print()
         for k in d:
-            if k[0] == '_':
+            if k.startswith('_'):
                 continue
             name = k
             value = d[k]
