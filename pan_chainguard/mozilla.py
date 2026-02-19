@@ -16,7 +16,9 @@
 
 import csv
 import sys
-from typing import Optional
+from typing import Optional, Union
+
+from pan_chainguard.util import open_csv_source
 
 
 class MozillaError(Exception):
@@ -35,7 +37,7 @@ class MozillaError(Exception):
 
 class MozillaCaCerts:
     def __init__(self, *,
-                 path: str):
+                 source: Union[str, bytes]):
         def insert(row):
             self.certs[row[SHA256]] = row[PEM]
 
@@ -43,7 +45,7 @@ class MozillaCaCerts:
         self.name = None
 
         try:
-            with open(path, 'r', newline='') as csvfile:
+            with open_csv_source(source) as csvfile:
                 reader = csv.DictReader(csvfile,
                                         dialect='unix')
                 row = next(reader)
@@ -92,7 +94,7 @@ class MozillaCaCerts:
 
 class MozillaOneCrl:
     def __init__(self, *,
-                 path: str,
+                 source: Union[str, bytes],
                  debug: bool = False):
         self.certs = {}
         EXPECTED = {  # subset
@@ -102,7 +104,7 @@ class MozillaOneCrl:
         }
 
         try:
-            with open(path, 'r', newline='') as csvfile:
+            with open_csv_source(source) as csvfile:
                 reader = csv.DictReader(csvfile,
                                         dialect='unix')
                 fieldnames = set(reader.fieldnames or [])

@@ -15,6 +15,7 @@
 #
 
 from collections import defaultdict
+from contextlib import contextmanager
 import csv
 import io
 import os
@@ -22,7 +23,7 @@ import re
 import tarfile
 import time
 import treelib
-from typing import Optional, Union
+from typing import ContextManager, Optional, TextIO, Union
 
 NAME_PREFIX = 'LINK-'
 NAME_RE = r'^%s%s$' % (NAME_PREFIX, '[A-F0-9]{26,26}')
@@ -35,6 +36,27 @@ FIELDNAMES_FINGERPRINTS = [
 
 class UtilError(Exception):
     pass
+
+
+@contextmanager
+def open_csv_source(
+        source: Union[str, bytes],
+        *,
+        encoding: str = 'utf-8'
+) -> ContextManager[TextIO]:
+    if isinstance(source, str):
+        f = open(source, 'r', encoding=encoding, newline='')
+        try:
+            yield f
+        finally:
+            f.close()
+    else:
+        bio = io.BytesIO(source)
+        tio = io.TextIOWrapper(bio, encoding=encoding, newline='')
+        try:
+            yield tio
+        finally:
+            tio.close()
 
 
 def s1_in_s2(s1: str, s2: Union[str, list[str]]) -> bool:

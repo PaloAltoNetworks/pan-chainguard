@@ -49,7 +49,7 @@ async def main_loop():
     onecrl = None
     if args.onecrl:
         try:
-            onecrl = MozillaOneCrl(path=args.onecrl)
+            onecrl = MozillaOneCrl(source=args.onecrl)
         except MozillaError as e:
             print('MozillaOneCrl: %s' % e, file=sys.stderr)
             sys.exit(1)

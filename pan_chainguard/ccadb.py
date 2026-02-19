@@ -29,6 +29,8 @@ from enum import Flag, auto
 import sys
 from typing import Tuple, Union, Optional
 
+from pan_chainguard.util import open_csv_source
+
 
 class CcadbError(Exception):
     pass
@@ -213,7 +215,7 @@ def root_status_bits(bits: RootStatusBits,
 
 class CcadbRootTrustSettings:
     def __init__(self, *,
-                 path: str,
+                 source: Union[str, bytes],
                  debug: bool = False):
         self._certs = {}
         self._debug = debug
@@ -224,7 +226,7 @@ class CcadbRootTrustSettings:
         }
 
         try:
-            with open(path, 'r', newline='') as csvfile:
+            with open_csv_source(source) as csvfile:
                 reader = csv.DictReader(csvfile,
                                         dialect='unix')
                 fieldnames = set(reader.fieldnames or [])

@@ -66,7 +66,7 @@ async def main_loop():
         for x in args.certs_mozilla:
             try:
                 mozilla.append(
-                    pan_chainguard.mozilla.MozillaCaCerts(path=x))
+                    pan_chainguard.mozilla.MozillaCaCerts(source=x))
             except pan_chainguard.mozilla.MozillaError as e:
                 print(str(e), file=sys.stderr)
                 sys.exit(1)
