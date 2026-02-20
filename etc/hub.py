@@ -131,11 +131,13 @@ def mozilla_tree(tree: Tree, trust) -> Tree:
     for child in list(new_tree.children(new_tree.root)):
         sha256 = child.identifier
         status_bits = trust.root_status_bits_flag(sha256=sha256)
-        trust_bits = trust.mozilla_trust_bits(sha256=sha256)
-        if not (status_bits is not None and
-                RootStatusBits.MOZILLA in status_bits and
-                TrustBits.SERVER_AUTHENTICATION in trust_bits):
-            new_tree.remove_node(child.identifier)  # removes entire subtree
+        if (status_bits is not None and
+            RootStatusBits.MOZILLA in status_bits):
+            trust_bits = trust.mozilla_trust_bits(sha256=sha256)
+            if TrustBits.SERVER_AUTHENTICATION in trust_bits:
+                continue
+
+        new_tree.remove_node(child.identifier)  # removes entire subtree
 
     return new_tree
 
