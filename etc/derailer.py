@@ -107,18 +107,19 @@ async def main_loop():
                 if m:
                     summary = ', '.join(m)
                     summary = ' (%s)' % summary
+                data = '\n'.join(sorted(fingerprints)) + '\n'
+                digest = hashlib.sha256(data.encode()).hexdigest()
                 print(f'{x.__name__}: '
-                      f'{len(fingerprints)} root CAs{summary}')
+                      f'{len(fingerprints)} root CAs SHA256 {digest}{summary}')
                 if args.verbose:
                     for type_ in sorted(messages.keys()):
                         for msg in messages[type_]:
                             print(f'{x.__name__}: {msg}')
                 if args.save:
                     path = args.save / f'{x.__name__}.txt'
-                    digest = save(path, sorted(fingerprints))
-                    if digest and args.verbose:
-                        print(f'Saved fingerprints '
-                              f'(SHA256 {digest}) to {path}')
+                    save(path, data)
+                    if args.verbose:
+                        print(f'Saved {x.__name__} to {path}')
 
 
 async def download(
@@ -256,16 +257,12 @@ def check_validity(ccadb, fingerprints):
     return messages
 
 
-def save(path, fingerprints):
-    data = '\n'.join(fingerprints) + '\n'
+def save(path, data):
     try:
         with open(path, 'w') as f:
             f.write(data)
     except OSError as e:
         print(f'{path}: {e}', file=sys.stderr)
-        return
-
-    return hashlib.sha256(data.encode()).hexdigest()
 
 
 def websites_trusted(vendor, row):
