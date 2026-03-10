@@ -449,6 +449,11 @@ def chrome_0() -> Optional[list]:
     return fingerprints
 
 
+# https://github.com/chromium/chromium/tree/main/net/data/ssl/chrome_root_store
+#   root_store.md
+#   root_store.certs
+#   root_store.textproto
+# chrome://certificate-manager
 @set_url('https://raw.githubusercontent.com/chromium/chromium/'
          'main/net/data/ssl/chrome_root_store/root_store.certs')
 def chrome_1() -> Optional[list]:
