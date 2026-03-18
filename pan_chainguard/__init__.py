@@ -16,3 +16,4 @@
 
 __version__ = '0.12.0'
 title = 'pan-chainguard'
+user_agent = f'{title}/{__version__}'

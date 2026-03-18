@@ -26,7 +26,7 @@ import time
 libpath = os.path.dirname(os.path.abspath(__file__))
 sys.path[:0] = [os.path.join(libpath, os.pardir)]
 
-from pan_chainguard import title, __version__
+from pan_chainguard import title, __version__, user_agent
 from pan_chainguard.ccadb import *
 from pan_chainguard.crtsh import ArgsError, CrtShApi
 import pan_chainguard.mozilla
@@ -222,7 +222,6 @@ async def download(api, sha256):
 
 
 async def get_cert_files(sha256):
-    user_agent = '%s/%s' % (title, __version__)
     headers = {'user-agent': user_agent}
 
     try:
