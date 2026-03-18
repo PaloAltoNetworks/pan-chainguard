@@ -40,7 +40,7 @@ except ImportError:
 libpath = os.path.dirname(os.path.abspath(__file__))
 sys.path[:0] = [os.path.join(libpath, os.pardir)]
 
-from pan_chainguard import title, __version__
+from pan_chainguard import title, __version__, user_agent
 from pan_chainguard.ccadb import revoked, valid_from, valid_to
 
 DOWNLOAD_TIMEOUT = 5
@@ -66,15 +66,18 @@ async def main_loop():
             for x in v:
                 print(k, x.__name__, x.url, file=sys.stderr)
 
-    vendors_ = set(args.vendor)
     timeout = aiohttp.ClientTimeout(total=DOWNLOAD_TIMEOUT)
-
+    headers = {'user-agent': user_agent}
+    vendors_ = set(args.vendor)
     urls = set([x.url for vendor in vendors_
                 for x in vendors[vendor]])
     urls = list(urls)
-    async with aiohttp.ClientSession(timeout=timeout) as session:
+
+    async with aiohttp.ClientSession(timeout=timeout,
+                                     headers=headers) as session:
         tasks = [download(session, url) for url in urls]
         results = await asyncio.gather(*tasks)
+
     for idx, url in enumerate(urls):
         downloads[url] = results[idx]
         ok, r = downloads[url]
