@@ -27,7 +27,6 @@ from typing import ContextManager, Optional, TextIO, Union
 
 NAME_PREFIX = 'LINK-'
 NAME_RE = r'^%s%s$' % (NAME_PREFIX, '[A-F0-9]{26,26}')
-NAME_RE_COMPAT = r'^(\d{4,4}|LINK)-[0-9A-F]{26,26}$'
 FIELDNAMES_FINGERPRINTS = [
     'type',
     'sha256',

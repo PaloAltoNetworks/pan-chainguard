@@ -41,8 +41,7 @@ sys.path[:0] = [os.path.join(libpath, os.pardir)]
 from pan_chainguard import title, __version__
 import pan_chainguard.util
 
-# XXX keep compatible with sequence based naming for now
-NAME_RE = pan_chainguard.util.NAME_RE_COMPAT
+NAME_RE = pan_chainguard.util.NAME_RE
 
 args = None
 
