@@ -47,6 +47,7 @@ sys.path[:0] = [os.path.join(libpath, os.pardir)]
 from pan_chainguard import title, __version__
 from pan_chainguard.ccadb import (CcadbRootTrustSettings, CcadbError,
                                   RootStatusBits, TrustBits)
+from pan_chainguard.mozilla import MozillaError, MozillaOneCrl
 import pan_chainguard.util
 
 DOWNLOAD_TIMEOUT = 5.0  # total
@@ -82,6 +83,7 @@ async def main_loop(specs):
         return 1
 
     trust = load_root_trust(outputs['trust_settings'])
+    onecrl = load_onecrl(outputs['onecrl'])
 
     cg_tree = load_cert_tree(outputs['tree'])
     cg_moz_tree = mozilla_tree(cg_tree, trust)
@@ -93,7 +95,7 @@ async def main_loop(specs):
 
     moz_certs = load_moz_certs(outputs['moz_int'])
 
-    r = diff(moz_certs, cg_moz_certs_info, cg_hash_index)
+    r = await diff(onecrl, moz_certs, cg_moz_certs_info, cg_hash_index)
 
     return r
 
@@ -107,6 +109,17 @@ def load_root_trust(input: bytes):
         sys.exit(1)
 
     return trust
+
+
+def load_onecrl(input: bytes):
+    try:
+        onecrl = MozillaOneCrl(source=input,
+                               debug=bool(args.debug))
+    except MozillaError as e:
+        print('MozillaOneCrl: %s' % e, file=sys.stderr)
+        sys.exit(1)
+
+    return onecrl
 
 
 def load_cert_tree(input: bytes):
@@ -132,7 +145,7 @@ def mozilla_tree(tree: Tree, trust) -> Tree:
         sha256 = child.identifier
         status_bits = trust.root_status_bits_flag(sha256=sha256)
         if (status_bits is not None and
-            RootStatusBits.MOZILLA in status_bits):
+           RootStatusBits.MOZILLA in status_bits):
             trust_bits = trust.mozilla_trust_bits(sha256=sha256)
             if TrustBits.SERVER_AUTHENTICATION in trust_bits:
                 continue
@@ -190,6 +203,7 @@ def get_cert_info(data):
                 sha256, fingerprint), file=sys.stderr)
 
         x = {
+            'cert': cert,
             'cert_fingerprint_sha256': sha256,
             'cert_type': cert_type,
             'cert_der_sha256_b64': der_sha256_b64(cert),
@@ -233,7 +247,7 @@ def load_moz_certs(input: bytes):
     return moz_certs
 
 
-def diff(moz_certs, cg_moz_certs_info, cg_hash_index):
+async def diff(onecrl, moz_certs, cg_moz_certs_info, cg_hash_index):
     r = 0
 
     missing = []
@@ -255,6 +269,8 @@ def diff(moz_certs, cg_moz_certs_info, cg_hash_index):
         if args.debug > 1:
             print(pprint.pformat(missing), file=sys.stderr)
 
+        await mozilla_missing(onecrl, missing)
+
     missing = []
     for x in cg_moz_certs_info:
         if (x['cert_type'] == 'intermediate' and
@@ -269,6 +285,58 @@ def diff(moz_certs, cg_moz_certs_info, cg_hash_index):
             print(pprint.pformat(missing), file=sys.stderr)
 
     return r
+
+
+async def mozilla_missing(onecrl, missing):
+    CDN_BASE = 'https://firefox-settings-attachments.cdn.mozilla.net/'
+    timeout = aiohttp.ClientTimeout(total=DOWNLOAD_TIMEOUT)
+
+    async with aiohttp.ClientSession(timeout=timeout) as session:
+        for x in missing:
+            der_hash = x['derHash']
+
+            attachment = x['attachment']
+            if attachment['mimetype'] != 'application/x-pem-file':
+                print('Unsupported mimetype:', x, file=sys.stderr)
+                continue
+
+            url = CDN_BASE + attachment['location']
+            ok, content_or_err = await download_url(
+                session=session,
+                url=url,
+                label=der_hash)
+
+            if not ok:
+                print(content_or_err, file=sys.stderr)
+                continue
+
+            pem_cert = content_or_err
+            if attachment['size'] != len(pem_cert):
+                print('PEM size mismatch: %s' % x, file=sys.stderr)
+
+            hash = hashlib.sha256(pem_cert).hexdigest()
+            if attachment['hash'] != hash:
+                print('PEM hash mismatch: %s' % x, file=sys.stderr)
+
+            cert = load_pem_cert(pem_cert)
+            sha256 = fingerprint_sha256(cert)
+            if args.debug:
+                print('downloaded', sha256, der_hash)
+
+            lst = []
+            r = onecrl.get(sha256=sha256)
+            if r is not None:
+                s = 'in OneCRL "%s"' % (
+                    r['Revocation Status'])
+                if r['Comments']:
+                    s += ' "%s"' % (
+                        r['Comments'].replace('\r\n', ' '))
+                lst.append(s)
+
+            msg = sha256
+            msg += ' ' + ' '.join(lst) if lst else ''
+
+            print(msg)
 
 
 async def resolve_inputs(
@@ -425,8 +493,7 @@ def parse_args():
     parser.add_argument('-o', '--onecrl',
                         metavar='PATH',
                         type=Path,
-                        help=argparse.SUPPRESS)
-#                        help='Mozilla OneCRL CSV path')
+                        help='Mozilla OneCRL CSV path')
     parser.add_argument('--verbose',
                         action='store_true',
                         help='enable verbosity')
