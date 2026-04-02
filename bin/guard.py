@@ -548,7 +548,7 @@ def update_certs(xapi, xpath):
         return
 
     for name in delete:
-        delete_cert(xapi, xpath, name)
+        delete_cert(xapi, xpath, len(delete), name)
     print('%d certificates deleted' % len(delete))
 
     total = 0
