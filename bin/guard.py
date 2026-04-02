@@ -419,12 +419,12 @@ def delete_certs(xapi, xpath):
         return
 
     for name in data:
-        delete_cert(xapi, xpath, name)
+        delete_cert(xapi, xpath, len(data), name)
 
     print('%d certificates deleted' % len(data))
 
 
-def delete_cert(xapi, xpath, name):
+def delete_cert(xapi, xpath, total, name):
     rootca = xpath.trusted_root_ca()
     member = "/member[text()='%s']" % name
     kwargs = {'xpath': rootca + member}
@@ -436,8 +436,16 @@ def delete_cert(xapi, xpath, name):
     # XXX can return status_code 7 intermittently; workaround is
     # to re-run
     api_request(xapi, xapi.delete, kwargs, 'success', '20')
+    try:
+        delete_cert.count += 1
+    except AttributeError:
+        delete_cert.count = 1
+
     if args.verbose:
-        print('deleted', name, file=sys.stderr)
+        print('deleted %s %d/%d' % (
+            name,
+            delete_cert.count,
+            total), file=sys.stderr)
 
 
 def get_trusted_root_cas(xapi, xpath):
@@ -545,7 +553,7 @@ def update_certs(xapi, xpath):
 
     total = 0
     for name in add:
-        if add_cert(xapi, xpath, name, new[name]):
+        if add_cert(xapi, xpath, len(add), name, new[name]):
             total += 1
 
     if total:
@@ -554,7 +562,7 @@ def update_certs(xapi, xpath):
     print('%d certificates added' % total)
 
 
-def add_cert(xapi, xpath, cert_name, content):
+def add_cert(xapi, xpath, total, cert_name, content):
     kwargs = {
         'category': 'certificate',
         'file': content,
@@ -600,7 +608,10 @@ def add_cert(xapi, xpath, cert_name, content):
         add_cert.cert_names = [cert_name]
 
     if args.verbose:
-        print('added %s' % cert_name, file=sys.stderr)
+        print('added %s %d/%d' % (
+            cert_name,
+            len(add_cert.cert_names),
+            total), file=sys.stderr)
 
     return True
 
