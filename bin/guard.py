@@ -261,12 +261,6 @@ async def main_loop():
 
 def exclude_cert(sha256):
     EXCLUDE = [
-        # This root is in microsoft root store and is PAN-OS predefined
-        # 0216_CCA_India_2015_SPL.
-        # Expires Jan 29 11:36:43 2025 GMT.
-        # 'openssl verify -check_ss_sig' fails with bad signature
-        # PAN-257401
-        'C34C5DF53080078FFE45B21A7F600469917204F4F0293F1D7209393E5265C04F',
         # XXX Signature Algorithm: rsassaPss
         '233525D6E906A9B99176204E3C2B4FBF5CEE03F2D126B2E64428BDF97CBC6138',
     ]
