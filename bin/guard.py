@@ -226,10 +226,15 @@ async def main_loop():
         print(xpath.trusted_root_ca(), file=sys.stderr)
         print(xpath.root_ca_exclude_list(), file=sys.stderr)
 
+    if any([args.show, show_tree,
+            args.update_trusted, args.delete, args.update]):
+        data = get_certs(xapi, xpath)
+
     if args.show:
-        show(xapi, xpath)
+        show(xapi, xpath, data)
+
     if args.show_tree:
-        show_tree(xapi, xpath)
+        show_tree(xapi, xpath, data)
 
     # experimental
     if args.enable_trusted:
@@ -240,10 +245,10 @@ async def main_loop():
         disable_trusted(xapi, xpath)
 
     if args.update_trusted:
-        update_trusted_root_cas(xapi, xpath, quiet=False)
+        update_trusted_root_cas(xapi, xpath, data, quiet=False)
 
     if args.delete:
-        delete_certs(xapi, xpath)
+        delete_certs(xapi, xpath, data)
 
     if args.update:
         if args.certs is None:
@@ -252,8 +257,7 @@ async def main_loop():
         if args.type is None:
             print('--type argument required', file=sys.stderr)
             sys.exit(1)
-
-        update_certs(xapi, xpath)
+        update_certs(xapi, xpath, data)
 
     if args.commit:
         commit(xapi, panorama)
@@ -405,9 +409,7 @@ def get_certs(xapi, xpath):
     return data
 
 
-def delete_certs(xapi, xpath):
-    data = get_certs(xapi, xpath)
-
+def delete_certs(xapi, xpath, data):
     if args.dry_run:
         print('delete dry-run: %d to delete' % len(data))
         return
@@ -460,8 +462,7 @@ def get_trusted_root_cas(xapi, xpath):
     return data
 
 
-def update_trusted_root_cas(xapi, xpath, quiet=True):
-    cert_names = get_certs(xapi, xpath)
+def update_trusted_root_cas(xapi, xpath, cert_names, quiet=True):
     add = []
 
     if cert_names:
@@ -502,9 +503,7 @@ def add_trusted_root_cas(xapi, xpath, cert_names):
     api_request(xapi, xapi.set, kwargs, 'success', '20')
 
 
-def update_certs(xapi, xpath):
-    old = get_certs(xapi, xpath)
-
+def update_certs(xapi, xpath, old):
     new = {}
     try:
         data = pan_chainguard.util.read_cert_archive(
@@ -610,8 +609,7 @@ def add_cert(xapi, xpath, total, cert_name, content):
     return True
 
 
-def show(xapi, xpath):
-    data = get_certs(xapi, xpath)
+def show(xapi, xpath, data):
     out = []
     num_expired = 0
 
@@ -682,8 +680,7 @@ def duplicates_in_path(tree: Tree) -> list[dict]:
     return duplicates
 
 
-def show_tree(xapi, xpath):
-    data = get_certs(xapi, xpath)
+def show_tree(xapi, xpath, data):
     issuers = defaultdict(list)
     subjects = defaultdict(list)
     roots = []
