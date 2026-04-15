@@ -226,7 +226,7 @@ async def main_loop():
         print(xpath.trusted_root_ca(), file=sys.stderr)
         print(xpath.root_ca_exclude_list(), file=sys.stderr)
 
-    if any([args.show, show_tree,
+    if any([args.show, args.show_tree,
             args.update_trusted, args.delete, args.update]):
         data = get_certs(xapi, xpath)
 
