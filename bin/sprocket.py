@@ -330,7 +330,7 @@ def policy_match(policy, root_trust_settings, row):
 
 def write_fingerprints(policy_certs):
     data = []
-    for x in policy_certs:
+    for x in sorted(policy_certs):
         row = {}
         row['type'] = 'root'
         row['sha256'] = x
