@@ -21,6 +21,7 @@ import asyncio
 from collections import defaultdict
 import logging
 import os
+from pathlib import Path
 import pprint
 import re
 import sys
@@ -874,6 +875,13 @@ def parse_args():
             x = 'vsys' + x
         return x
 
+    def existing_file(value: str) -> Path:
+        p = Path(value)
+        if not p.is_file():
+            raise argparse.ArgumentTypeError(
+                f'{value!r} is not an existing file')
+        return p
+
     parser = argparse.ArgumentParser(
         usage='%(prog)s [options]',
         description='update PAN-OS trusted CAs')
@@ -887,6 +895,7 @@ def parse_args():
                         help='Panorama template')
     parser.add_argument('--certs',
                         metavar='PATH',
+                        type=existing_file,
                         help='certificate archive path')
     parser.add_argument('--update',
                         action='store_true',
