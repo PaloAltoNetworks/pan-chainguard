@@ -18,7 +18,7 @@
 #
 # All Certificate Information (root and intermediate) in CCADB (CSV)
 # utility functions.
-# https://ccadb.my.salesforce-sites.com/ccadb/AllCertificateRecordsCSVFormatv4
+# https://ccadb.my.salesforce-sites.com/ccadb/AllCertificateRecordsCSVFormatv5
 #
 # All Included Root Certificate Trust Bit Settings:
 # https://ccadb.my.salesforce-sites.com/ccadb/AllIncludedRootCertsCSV

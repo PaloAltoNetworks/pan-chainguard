@@ -532,7 +532,7 @@ def parse_args():
                         metavar='DIR',
                         type=Path,
                         help='save fingerprints to directory')
-    # https://ccadb.my.salesforce-sites.com/ccadb/AllCertificateRecordsCSVFormatv4
+    # https://ccadb.my.salesforce-sites.com/ccadb/AllCertificateRecordsCSVFormatv5
     parser.add_argument('-c', '--ccadb',
                         metavar='PATH',
                         type=Path,
