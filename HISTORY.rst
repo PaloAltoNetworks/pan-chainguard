@@ -1,6 +1,74 @@
 Release History
 ===============
 
+0.13.0 (2026-06-11)
+-------------------
+
+- Add support for Strata Cloud Manager.
+
+- Use AllCertificateRecordsCSVFormatv5.
+
+- bin/guard.py: Check --certs for existing file.
+
+- bin/guard.py: Fix to use args.show_tree.
+
+- bin/sprocket.py: Sort fingerprints in CSV.
+
+- bin/guard.py: Call get_certs() once.
+
+- bin/guard.py: Remove expired certificate from exclude list.
+
+- bin/guard.py: Display progress on verbose delete and add as
+  current/total.
+
+- pan_chainguard/util.py, bin/guard.py: Remove matching for sequence
+  based naming (pan_chainguard.util.NAME_RE_COMPAT).
+
+- setup.cfg: SetuptoolsDeprecationWarning: License classifiers are
+  deprecated.
+
+- bin/chainring.py: Use case insensitive sort.
+
+- bin/link.py: Move user_agent to pan_chainguard.
+
+- etc/hub.py: New program to perform pan-chainguard and mozilla
+  certificate analysis.
+
+- bin/chain.py, bin/link.py, bin/sprocket.py, pan_chainguard/ccadb.py,
+  pan_chainguard/mozilla.py, pan_chainguard/util.py:
+
+  Add pan_chainguard.util.open_csv_source() to allow CSV read from
+  path or bytes.
+
+- bin/guard.py:
+
+  Handle escaped slash (\/) for subject and issuer CN match.
+  /CN=I.CA TLS Root CA\/RSA 05\/2022
+  would previously result in:
+    "I.CA TLS Root CA\"
+  now:
+    "I.CA TLS Root CA/RSA 05/2022"
+
+- pan_chainguard/util.py: Add fileobj to read_cert_archive().
+
+- etc/fairing.py: New program to manage certificate archive.
+
+- bin/chainring.py: Add --depth to prune certificate tree to a maximum
+  depth.
+
+- bin/chainring.py: Fix AttributeError on tree_to_html counters for
+  cases where no roots or intermediates.
+
+- bin/chainring.py: Fix UnboundLocalError for s and rework for
+  consistency.
+
+- bin/chain.py, bin/sprocket.py, pan_chainguard/ccadb.py,
+  pan_chainguard/mozilla.py, pan_chainguard/util.py:
+
+  Add checks for valid CSV input.
+
+- Documentation fixes and improvements.
+
 0.12.0 (2025-11-12)
 -------------------
 
