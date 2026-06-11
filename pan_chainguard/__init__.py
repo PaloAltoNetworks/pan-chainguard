@@ -14,6 +14,12 @@
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 #
 
+import logging
+
 __version__ = '0.12.0'
 title = 'pan-chainguard'
 user_agent = f'{title}/{__version__}'
+
+DEBUG1 = logging.DEBUG
+DEBUG2 = DEBUG1 - 1
+DEBUG3 = DEBUG2 - 1

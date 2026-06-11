@@ -4,6 +4,7 @@
 flowchart TD
     panos{{"PAN-OS NGFW, Panorama<br/>Export Default Trusted CAs"}}
     panos2{{"PAN-OS NGFW, Panorama<br/>Update Device Certificates"}}
+    scm{{"Strata Cloud Manager<br/>Update Custom Certificates"}}
     truststore[(trust-store.tgz)]
     truststoredir[(trust-store/)]
     trustpolicy[("policy.json<br/>[mozilla,apple,microsoft,chrome]")]
@@ -12,7 +13,8 @@ flowchart TD
     chain("chain.py<br/>determine intermediate CAs")
     link("link.py<br/>get CA certificates")
     guard("guard.py<br/>update PAN-OS trusted CAs")
-	chainring("chainring.py<br/>certificate tree analysis and reporting")
+    bashguard("bashguard.py<br/>update SCM trusted CAs")
+    chainring("chainring.py<br/>certificate tree analysis and reporting")
     curl(curl)
     untar(untar)
     fingerprints(cert-fingerprints.sh)
@@ -57,4 +59,6 @@ flowchart TD
     link-->newcertificates
     newcertificates-->guard
     guard<-->|XML API|panos2
+    newcertificates-->bashguard
+    bashguard<-->|SCM API|scm
 ```

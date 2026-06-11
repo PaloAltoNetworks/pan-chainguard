@@ -27,6 +27,7 @@ from typing import ContextManager, Optional, TextIO, Union
 
 NAME_PREFIX = 'LINK-'
 NAME_RE = r'^%s%s$' % (NAME_PREFIX, '[A-F0-9]{26,26}')
+NAME_RE_SCM = r'^%s%s$' % (NAME_PREFIX, '[A-F0-9]{58,58}')
 FIELDNAMES_FINGERPRINTS = [
     'type',
     'sha256',
@@ -134,6 +135,11 @@ def hash_to_name(*, sha256: str) -> str:
     # PAN-99186 won't do
     x = NAME_PREFIX + sha256
     return x[0:31]
+
+
+def hash_to_name_scm(*, sha256: str) -> str:
+    x = NAME_PREFIX + sha256
+    return x[0:63]
 
 
 def read_fingerprints(*, path: str) -> list[dict[str, str]]:

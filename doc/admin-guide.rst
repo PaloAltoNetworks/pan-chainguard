@@ -166,7 +166,7 @@ Install pan-chainguard using ``pip``
 pan-chainguard Command Line Programs
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-``pan-chainguard`` provides 6 Python command line programs and a shell
+``pan-chainguard`` provides 7 Python command line programs and a shell
 script:
 
 - ``fling.py`` - Deprecated
@@ -223,11 +223,14 @@ script:
   + Old (previous) certificate archive
   + crt.sh API
 
-- ``guard.py``
+- ``guard.py`` - PAN-OS, Panorama
+- ``bashguard.py`` - Strata Cloud Manager (SCM)
 
-  Command line program which takes as input the certificate archive
-  created by ``link.py`` and imports the certificates (root and
-  intermediate) as trusted CA device certificates on PAN-OS.
+  Command line programs which take as input the certificate archive
+  created by ``link.py`` and import the certificates (root and
+  intermediate) as Trusted CA Device Certificates on PAN-OS and
+  Panorama (``guard.py``) or Custom Certificates on SCM
+  (``bashguard.py``).
 
 Command options can be displayed using ``--help`` (e.g.,
 ``chain.py --help``).
@@ -295,6 +298,75 @@ The admin role profile for Panorama::
 When using ``guard.py`` to commit the configuration, the ``--admin``
 option should be used to specify the ``pan-chainguard`` specific admin
 to guarantee only changes made by the admin are committed.
+
+pan-chainguard SCM API Usage
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+``bashguard.py`` uses the `SCM API
+<https://pan.dev/scm/docs/home/>`_
+to import and manage certificates.  A credentials file containing a
+JSON object is used to store the tenant service group ID, client ID
+and client secret used for OAuth2 authentication.
+
+SCM Cloud Management Version
+............................
+
+Cloud Management Version 2026.r2.1 or greater is required.
+
+SCM API Custom Role
+...................
+
+First create a custom role, with only the permissions required by ``bashguard.py``.
+
+On `HUB
+<https://apps.paloaltonetworks.com/hub>`_,
+for your SCM tenant,
+select *Common Services->Identity and Access->Roles->Custom Roles->Add
+Custom Role->API* then *Add Permissions* to create a role with the
+following permissions::
+
+   Prisma Access & NGFW Configuration
+
+     prisma_access.config_software_version
+       prisma_access.config_software_version.read   Read software version.
+
+     prisma_access.certificates
+       prisma_access.certificates.create            Create certificates and associated resources.
+       prisma_access.certificates.delete            Delete certificates and associated resources.
+       prisma_access.certificates.read              Read certificates and associated resources.
+
+     prisma_access.decryption_policies
+       prisma_access.decryption_policies.create     Create decryption rules, profiles, and exclusions.
+       prisma_access.decryption_policies.read       Read decryption rules, profiles, and exclusions.
+       prisma_access.decryption_policies.update     Update decryption rules, profiles, and exclusions.
+
+SCM Service Account Identity
+............................
+
+Then create an identity of type service account using the custom role.
+
+On `HUB
+<https://apps.paloaltonetworks.com/hub>`_,
+for your SCM tenant,
+select *Common Services->Identity and Access->Access Management->Add
+Identity*, to create a *Service Account* identity with the least
+privilege custom API role.
+
+.. note:: In *Assign Roles* select *Prisma Access & NGFW Configuration*
+	  for *Apps & Services*
+
+SCM API Credentials File
+........................
+
+Finally create the credentials file with your TSG ID, and the *Client
+ID* and *Client Secret* for the identity::
+
+   $ cat ~/.keys/scm-pan-chainguard.json
+   {
+       "tsg_id": "nnnnnnnnnn",
+       "client_id": "pan-chainguard@nnnnnnnnnn.iam.panserviceaccount.com",
+       "client_secret": "******"
+   }
 
 Running pan-chainguard
 ----------------------
@@ -834,8 +906,8 @@ archive.
    crt.sh: 0
    Total certs-new: 1911
 
-guard.py
-~~~~~~~~
+guard.py - PAN-OS, Panorama
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 guard.py Usage
 ..............
@@ -906,12 +978,12 @@ import the certificates as trusted CA device certificates on PAN-OS:
 + ``--show`` is used the show the pan-chainguard managed
   configuration.
 
-The device certificate names can have a maximum length of 31
+The device certificate names have a maximum length of 31
 characters on Panorama and 63 on PAN-OS.  They are constructed in a
 way to avoid conflict with other user and machine defined certificate
 names, and also to have a well-defined pattern so ``guard.py`` can
 manage certificates it owns.  The PAN-OS certificate name pattern
-(format) used is:
+used is:
 
 + The length is 31 characters (the maximum length on Panorama)
 
@@ -962,6 +1034,123 @@ manage certificates it owns.  The PAN-OS certificate name pattern
    $ bin/guard.py -t pa-460-chainguard --show
    1911 Device Certificates
    1911 Trusted Root CA Certificates
+
+bashguard.py - SCM
+~~~~~~~~~~~~~~~~~~
+
+bashguard.py Usage
+..................
+
+::
+
+   $ bin/bashguard.py --help
+   usage: bashguard.py [options]
+
+   update SCM trusted CAs
+
+   options:
+     -h, --help            show this help message and exit
+     -C PATH, --credentials PATH
+                           OAuth2 JSON client credentials path
+     --snippet NAME        SCM snippet
+     --folder NAME         SCM folder
+     --certs PATH          certificate archive path
+     --update              update certificates
+     --delete              delete all previously added certificates
+     -T {root,intermediate}, --type {root,intermediate}
+                           certificate type(s) for update
+     --update-trusted      update trusted root CA for all certificates
+     --dry-run             don't update SCM
+     --show                show pan-chainguard managed config
+     --show-tree           show pan-chainguard managed certificates in tree format
+     --api-url URL         API URL
+                           default https://api.strata.paloaltonetworks.com
+     --oauth2-url URL      OAuth2 URL
+                           default https://auth.apps.paloaltonetworks.com
+     --timeout T[,T]       API timeout
+     --verify OPTION       SSL server verify option: yes|no|cafile|capath
+     --verbose             enable verbosity
+     --debug {0,1,2,3}     enable debug
+     --dtime               add time string to debug output
+     --version             display version
+
+SCM snippet vs. folder Usage Best Practice
+..........................................
+
+As a best practice, it is recommended to create a pan-chainguard
+specific/dedicated snippet which can be associated with appropriate
+folders. Using a folder is also supported to allow additional
+configuration workflows if needed. Certificates once imported cannot
+be moved or cloned to another location; using a snippet ensures the
+most portability and allows for quick application and removal from a
+configuration.
+
+bashguard.py Example
+....................
+
+``bashguard.py`` uses the certificate archive created by ``link.py`` to
+import the certificates as Custom Certificates on SCM:
+
++ ``--credentials`` specifies the OAuth2 JSON client credentials path.
+
++ ``--snippet`` is used to specify the snippet.
+
++ ``--folder`` is used to specify the folder.
+
++ ``--delete`` is used to delete all previously added certificates.
+
++ ``--update`` is used to perform an initial update or incremental
+  update of certificates.
+
++ ``--certs`` specifies the certificate archive for the update.
+
++ ``--type`` specifies the certificate type(s) for the update:
+
+  * root - update only root certificates
+
+  * root and intermediate - update root and intermediate certificates
+
+  * intermediate - update only intermediate certificates.
+
++ ``--dry-run`` is used to show what actions ``bashguard.py`` would
+  perform without updating SCM.
+
++ ``--show`` is used the show the pan-chainguard managed
+  configuration.
+
+The custom certificate names have a maximum length of 63 on SCM.
+They are constructed in a way to avoid conflict with other user and
+machine defined certificate names, and also to have a well-defined
+pattern so ``bashguard.py`` can manage certificates it owns.  The
+SCM certificate name pattern used is:
+
++ Starts with 'LINK'
+
++ Followed by a single dash '-'
+
++ Followed by the first 58 characters of the uppercase hexadecimal
+  certificate fingerprint
+
+::
+
+   $ pwd
+   /home/ksteves/git/pan-chainguard
+
+   $ bin/bashguard.py -C ~/.keys/scm-pan-chainguard.json --snippet pan-chainguard-root-CAs --show
+   0 Custom Certificates
+
+   $ bin/bashguard.py -C ~/.keys/scm-pan-chainguard.json --snippet pan-chainguard-root-CAs \
+   > --update --certs tmp/certificates-new.tgz -T root --dry-run
+   update dry-run: 0 to delete, 222 to add
+
+   $ bin/bashguard.py -C ~/.keys/scm-pan-chainguard.json --snippet pan-chainguard-root-CAs \
+   > --update --certs tmp/certificates-new.tgz -T root
+   0 certificates deleted
+   222 certificates added
+
+   $ bin/bashguard.py -C ~/.keys/scm-pan-chainguard.json --snippet pan-chainguard-root-CAs --show
+   222 Custom Certificates
+   222 Trusted Root CA Certificates
 
 pan-chainguard-content - Certificate Content for pan-chainguard
 ---------------------------------------------------------------
@@ -1312,6 +1501,41 @@ fairing.py Example
    total_public_key_duplicates: 156
    total_root_certificates: 224
    total_serial_number_not_positive: 12
+
+Known Issues
+------------
+
+.. list-table::
+   :header-rows: 1
+
+   * - Product
+     - Issue ID
+     - Description
+
+   * - SCM
+     - ADI-56186
+
+     - Certificate import fails when there are a large number of
+       certificates.
+
+       When the total number of Custom Certificates exceeds several
+       hundred, certificate import can fail with "Internal
+       error. Failed to create xml node.".  Restarting the update will
+       usually allow more certificates to be imported, but another
+       import failure can occur.
+
+       **Workaround:**
+       Update only root certificates using ``bashguard.py --update -T root``.
+
+   * - SCM
+     - ADI-52964
+
+     - In the UI when viewing Custom Certificate Detail, Distinguished
+       Name (DN) fields are missing from Subject and Issuer.
+
+       **Workaround:** The ``bashguard.py --show`` option displays the
+       Subject and Issuer DN for each ``pan-chainguard`` managed
+       Custom Certificate.
 
 About the Name
 --------------
