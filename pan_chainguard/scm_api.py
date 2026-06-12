@@ -222,7 +222,7 @@ class ScmApi:
 
             if resp.status != 200:
                 raise ApiError(
-                    f'OAuth2 token request failed: HTTP {resp.status}: {text}'
+                    f'OAuth2 token request failed: HTTP {resp.status} {text}'
                 )
 
             try:
