@@ -16,7 +16,7 @@
 
 import logging
 
-__version__ = '0.13.0'
+__version__ = '0.13.1'
 title = 'pan-chainguard'
 user_agent = f'{title}/{__version__}'
 

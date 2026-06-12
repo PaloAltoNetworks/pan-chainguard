@@ -1,6 +1,14 @@
 Release History
 ===============
 
+0.13.1 (2026-06-12)
+-------------------
+
+- bashguard.py:
+
+  Skip certificates with import error "Failed to create xml node.".
+  Workaround for ADI-56186.
+
 0.13.0 (2026-06-11)
 -------------------
 
