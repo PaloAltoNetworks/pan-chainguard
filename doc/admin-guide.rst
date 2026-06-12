@@ -1515,17 +1515,14 @@ Known Issues
    * - SCM
      - ADI-56186
 
-     - Certificate import fails when there are a large number of
-       certificates.
+     - Certificate import fails with error "Failed to create xml
+       node." when the certificate has an ampersand (&) in its
+       subject.
 
-       When the total number of Custom Certificates exceeds several
-       hundred, certificate import can fail with "Internal
-       error. Failed to create xml node.".  Restarting the update will
-       usually allow more certificates to be imported, but another
-       import failure can occur.
+       This currently affects 11 intermediate certificates.
 
        **Workaround:**
-       Update only root certificates using ``bashguard.py --update -T root``.
+       ``bashguard.py`` skips certificates with the import error.
 
    * - SCM
      - ADI-52964

@@ -425,6 +425,7 @@ async def add_cert(scm, total, cert_name, content):
     SKIP_ERRORS = [
         'Certificate is expired',
         'Unsupported digest or keys used in FIPS-CC mode',
+        'Failed to create xml node.',
     ]
 
     resp = await api_request(scm.certificate_import, kwargs, [200, 400])
