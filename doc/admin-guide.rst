@@ -1507,6 +1507,7 @@ Known Issues
 
 .. list-table::
    :header-rows: 1
+   :widths: 10 10 80
 
    * - Product
      - Issue ID
@@ -1533,6 +1534,30 @@ Known Issues
        **Workaround:** The ``bashguard.py --show`` option displays the
        Subject and Issuer DN for each ``pan-chainguard`` managed
        Custom Certificate.
+
+   * - PAN-OS
+     - PAN-312686
+
+     - Commit times can increase as the number of Custom/Device
+       certificates grows, even when no certificate changes are made.
+       On Panorama this can be seen as slow push times.
+
+   * - PAN-OS
+     - PAN-267847
+
+     - Certificate import using ``guard.py`` can fail with "Failed to
+       find begining of certificate. Make sure certificate starts with
+       BEGIN CERTIFICATE tag".
+
+       config.log will contain the message "Op Set to merged tree
+       succeeded but failed for local tree, generating the merged tree
+       again".
+
+       This occurs on a firewall and not Panorama.
+
+       **Workaround:** There is nothing wrong with the certificate,
+       and the error is transient; rerun ``guard.py --update``.  You
+       may also need to perform a commit if the error persists.
 
 About the Name
 --------------
