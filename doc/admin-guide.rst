@@ -1538,13 +1538,16 @@ Known Issues
    * - PAN-OS
      - PAN-321143
 
-     - Commit fails after import of certificate with no Common Name (CN)::
+     - Commit fails on hardware firewall after import of certificate
+       with no Common Name (CN)::
 
          Validation Error:
          certificate -> LINK-34BB34E14FAED0D3392F2FC441  is missing 'common-name'
          certificate is invalid
 
        A certificate with no CN is valid.
+
+       **This occurs on hardware firewalls only and not VM-Series firewalls.**
 
        **Workaround:** None at this time.
 
