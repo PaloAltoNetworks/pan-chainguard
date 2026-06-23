@@ -1536,6 +1536,19 @@ Known Issues
        Custom Certificate.
 
    * - PAN-OS
+     - PAN-321143
+
+     - Commit fails after import of certificate with no Common Name (CN)::
+
+         Validation Error:
+         certificate -> LINK-34BB34E14FAED0D3392F2FC441  is missing 'common-name'
+         certificate is invalid
+
+       A certificate with no CN is valid.
+
+       **Workaround:** None at this time.
+
+   * - PAN-OS
      - PAN-312686
 
      - Commit times can increase as the number of Custom/Device
