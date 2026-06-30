@@ -340,6 +340,15 @@ following permissions::
        prisma_access.decryption_policies.read       Read decryption rules, profiles, and exclusions.
        prisma_access.decryption_policies.update     Update decryption rules, profiles, and exclusions.
 
+When using the ``bashguard.py --description`` option, the following
+additional permissions are required::
+
+   Prisma Access & NGFW Configuration
+
+     prisma_access.config_mgmt
+       prisma_access.config_mgmt.read               Read configurations snapshots.
+       prisma_access.config_mgmt.update             Update configuration snapshots and push configurations.
+
 SCM Service Account Identity
 ............................
 
@@ -1061,6 +1070,8 @@ bashguard.py Usage
                            certificate type(s) for update
      --update-trusted      update trusted root CA for all certificates
      --dry-run             don't update SCM
+     --description [TEXT|@PATH]
+                           update snippet description
      --show                show pan-chainguard managed config
      --show-tree           show pan-chainguard managed certificates in tree format
      --api-url URL         API URL
@@ -1114,6 +1125,12 @@ import the certificates as Custom Certificates on SCM:
 
 + ``--dry-run`` is used to show what actions ``bashguard.py`` would
   perform without updating SCM.
+
++ ``--description`` is used to update the snippet description when
+  the snippet contents are updated.  When used with no argument
+  the default contains the pan-chainguard version and a timestamp::
+
+    pan-chainguard/0.13.1 updated 2026-06-30 01:27:00 UTC
 
 + ``--show`` is used the show the pan-chainguard managed
   configuration.

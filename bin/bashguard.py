@@ -19,6 +19,8 @@
 import argparse
 import asyncio
 from collections import defaultdict
+from datetime import datetime, timezone
+from enum import Enum, auto
 import json
 import logging
 import os
@@ -45,6 +47,11 @@ import pan_chainguard.util
 NAME_RE = pan_chainguard.util.NAME_RE_SCM
 
 args = None
+
+
+class Description(Enum):
+    UNSPECIFIED = auto()
+    NO_ARGUMENT = auto()
 
 
 def main():
@@ -112,8 +119,9 @@ async def main_loop():
             if args.update_trusted:
                 await update_trusted_root_cas(scm, data.keys(), quiet=False)
 
+            total = 0
             if args.delete:
-                await delete_certs(scm, data)
+                total += await delete_certs(scm, data)
 
             if args.update:
                 if args.certs is None:
@@ -123,7 +131,11 @@ async def main_loop():
                     print('--type argument required', file=sys.stderr)
                     sys.exit(1)
 
-                await update_certs(scm, data)
+                total += await update_certs(scm, data)
+
+            if (total and args.snippet is not None and
+               args.description is not Description.UNSPECIFIED):
+                await update_description(scm)
 
     except (ArgsError, ApiError, Exception) as e:
         print_exception(e, args.debug)
@@ -228,10 +240,10 @@ async def get_certs(scm):
     return data
 
 
-async def delete_certs(scm, data):
+async def delete_certs(scm, data) -> int:
     if args.dry_run:
         print('delete dry-run: %d to delete' % len(data))
-        return
+        return 0
 
     if data:
         obj = await get_decryption_settings(scm)
@@ -249,6 +261,7 @@ async def delete_certs(scm, data):
             await delete_cert(scm, len(data), name, data[name]['id'])
 
     print('%d certificates deleted' % len(data))
+    return len(data)
 
 
 async def delete_cert(scm, total, name, id):
@@ -357,7 +370,7 @@ async def update_trusted_root_cas(scm, new, quiet=True):
         print('%d certificates enabled as trusted root CA' % len(add))
 
 
-async def update_certs(scm, old):
+async def update_certs(scm, old) -> int:
     new = {}
     try:
         data = pan_chainguard.util.read_cert_archive(
@@ -398,21 +411,22 @@ async def update_certs(scm, old):
     if args.dry_run:
         print('update dry-run: %d to delete, %d to add' % (
             len(delete), len(add)))
-        return
+        return 0
 
     delete_data = {k: v for k, v in old.items() if k in delete}
-    await delete_certs(scm, delete_data)
+    total_delete = await delete_certs(scm, delete_data)
 
-    total = 0
+    total_add = 0
     for name in add:
         if await add_cert(scm, len(add), name, new[name]):
-            total += 1
+            total_add += 1
 
-    if total:
+    if total_add:
         new = add_cert.cert_names + keep
         await update_trusted_root_cas(scm, new)
 
-    print('%d certificates added' % total)
+    print('%d certificates added' % total_add)
+    return total_delete + total_add
 
 
 async def add_cert(scm, total, cert_name, content):
@@ -458,6 +472,32 @@ async def add_cert(scm, total, cert_name, content):
             total), file=sys.stderr)
 
     return True
+
+
+async def update_description(scm):
+    kwargs = {'name': args.snippet}
+    resp = await api_request(scm.snippets_list, kwargs, [200, 403])
+    if resp.status == 403:
+        # XXX warning
+        return
+
+    data = await resp.json()
+    if args.debug > 1:
+        print(pprint.pformat(data), file=sys.stderr)
+
+    if args.description is Description.NO_ARGUMENT:
+        now_utc = datetime.now(timezone.utc)
+        date_str = now_utc.strftime('%Y-%m-%d %H:%M:%S UTC')
+        description = f'{user_agent} updated {date_str}'
+    else:
+        description = args.description
+
+    kwargs = {
+        'id': data['id'],
+        'name': args.snippet,
+        'description': description,
+    }
+    resp = await api_request(scm.snippet_replace, kwargs)
 
 
 async def show(scm, data):
@@ -681,6 +721,21 @@ def parse_args():
                 'verify must be yes, no or cafile, capath')
         return p
 
+    def description(value: str) -> str:
+        if not value.startswith('@'):
+            return value
+
+        filename = value[1:]
+        if not filename:
+            raise argparse.ArgumentTypeError("missing filename after '@'")
+
+        path = Path(filename)
+
+        try:
+            return path.read_text(encoding='utf-8')
+        except OSError as e:
+            raise argparse.ArgumentTypeError(f'{path}: {e}') from e
+
     parser = argparse.ArgumentParser(
         usage='%(prog)s [options]',
         description='update SCM trusted CAs',
@@ -717,6 +772,13 @@ def parse_args():
     parser.add_argument('--dry-run',
                         action='store_true',
                         help="don't update SCM")
+    parser.add_argument('--description',
+                        nargs='?',
+                        const=Description.NO_ARGUMENT,
+                        default=Description.UNSPECIFIED,
+                        type=description,
+                        metavar="TEXT|@PATH",
+                        help='update snippet description')
     parser.add_argument('--show',
                         action='store_true',
                         help='show %s managed config' % title)

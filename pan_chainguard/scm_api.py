@@ -521,3 +521,51 @@ class ScmApi:
         resp = await self._request('PUT', path, json=data, **kwargs)
 
         return resp
+
+    # https://pan.dev/scm/api/config/ngfw/setup/list-snippets/
+    # custom role API permission:
+    #   prisma_access.config_mgmt.read
+    async def snippets_list(
+            self, *,
+            name: Optional[str] = None,
+            limit: Optional[int] = None,
+            offset: Optional[int] = None,
+            **kwargs) -> aiohttp.ClientResponse:
+        base = '/config/setup/v1'
+        path = base + '/snippets'
+
+        params = dict(kwargs.pop('params', {}))
+        if name is not None:
+            params['name'] = name
+        if limit is not None:
+            params['limit'] = limit
+        if offset is not None:
+            params['offset'] = offset
+
+        resp = await self._request('GET', path, params=params, **kwargs)
+
+        return resp
+
+    # https://pan.dev/scm/api/config/ngfw/setup/update-snippet-by-id/
+    # custom role API permission:
+    #   prisma_access.config_mgmt.update
+    async def snippet_replace(
+            self, *,
+            id: Optional[str] = None,
+            name: Optional[str] = None,
+            description: Optional[str] = None,
+            data: Optional[str] = None,
+            **kwargs) -> aiohttp.ClientResponse:
+
+        base = '/config/setup/v1'
+        path = base + f'/snippets/{id}'
+
+        data = dict(data) if data is not None else {}
+        if name is not None:
+            data['name'] = name
+        if description is not None:
+            data['description'] = description
+
+        resp = await self._request('PUT', path, json=data, **kwargs)
+
+        return resp
