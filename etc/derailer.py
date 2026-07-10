@@ -96,12 +96,15 @@ async def main_loop():
     if args.ccadb:
         ccadb = load_ccadb(args.ccadb)
 
+    vendors_0 = {}
     for k, v in vendors.items():
         if k in vendors_:
             for x in v:
                 fingerprints = x()
                 if fingerprints is None:
                     continue
+                if x.__name__.endswith('_0'):
+                    vendors_0[x.__name__] = set(fingerprints)
                 messages = check_validity(ccadb, fingerprints)
                 m = []
                 for type_ in sorted(messages.keys()):
@@ -123,6 +126,32 @@ async def main_loop():
                     save(path, data)
                     if args.verbose:
                         print(f'Saved {x.__name__} to {path}')
+
+    sets = vendors_0.values()
+    vendors_ = ', '.join(sorted(vendors_0.keys()))
+
+    intersection = set.intersection(*sets)
+    print('%s: %d root CAs in all (intersection)' % (
+        vendors_, len(intersection)))
+
+    union = set.union(*sets)
+    print('%s: %d root CAs in any (union)' % (
+        vendors_, len(union)))
+
+    if args.save:
+        vendors_ = '_'.join(sorted(vendors_0.keys()))
+
+        path = args.save / f'intersection_{vendors_}.txt'
+        data = '\n'.join(sorted(intersection)) + '\n'
+        save(path, data)
+        if args.verbose:
+            print(f'Saved intersection to {path}')
+
+        path = args.save / f'union_{vendors_}.txt'
+        data = '\n'.join(sorted(union)) + '\n'
+        save(path, data)
+        if args.verbose:
+            print(f'Saved union to {path}')
 
 
 async def download(
@@ -502,10 +531,10 @@ def apple_0() -> Optional[list]:
 
 
 vendors = {
-    'mozilla': [mozilla_0, mozilla_1, mozilla_2],
-    'microsoft': [microsoft_0, microsoft_1, microsoft_2],
-    'chrome': [chrome_0, chrome_1],
     'apple': [apple_0],
+    'chrome': [chrome_0, chrome_1],
+    'microsoft': [microsoft_0, microsoft_1, microsoft_2],
+    'mozilla': [mozilla_0, mozilla_1, mozilla_2],
 }
 vendors['all'] = [x for vendor in vendors
                   for x in vendors[vendor]]
