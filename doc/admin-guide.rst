@@ -1564,9 +1564,11 @@ Known Issues
 
        A certificate with no CN is valid.
 
-       **This occurs on hardware firewalls only and not VM-Series firewalls.**
+       **This occurs on hardware platforms only and not VM-Series or virtual
+       Panorama.**
 
-       **Workaround:** None at this time.
+       **Workaround:** ``guard.py`` will create certificate
+       common-name XML node when non-existent.
 
    * - PAN-OS
      - PAN-312686

@@ -197,6 +197,7 @@ def main():
 async def main_loop():
     xapi = None
     panorama = False
+    hardware = False
 
     try:
         xapi = pan.xapi.PanXapi(tag=args.tag,
@@ -207,6 +208,8 @@ async def main_loop():
         if elem is not None:
             if elem.text == 'Panorama' or elem.text.startswith('M-'):
                 panorama = True
+            if elem.text.startswith('PA-') or elem.text.startswith('M-'):
+                hardware = True
         else:
             print("Can't get model", file=sys.stderr)
     except pan.xapi.PanXapiError as e:
@@ -259,6 +262,10 @@ async def main_loop():
             print('--type argument required', file=sys.stderr)
             sys.exit(1)
         update_certs(xapi, xpath, data)
+        # XXX PAN-321143
+        if hardware:
+            data = get_certs(xapi, xpath)
+            set_common_name(xapi, xpath, data)
 
     if args.commit:
         commit(xapi, panorama)
@@ -395,6 +402,10 @@ def get_certs(xapi, xpath):
                 print('%s expiry-epoch %s: %s' % (
                     name, expiry, e), file=sys.stderr)
 
+            common_name = None
+            if entry.find('./common-name') is not None:
+                common_name = entry.find('./common-name').text or ''
+
             v = {
                 'cert-name': name,
                 'subject': subject,
@@ -403,6 +414,7 @@ def get_certs(xapi, xpath):
                 'issuer': issuer,
                 'issuer-cn': issuer_cn,
                 'issuer-hash': entry.find('./issuer-hash').text,
+                'common-name': common_name,
                 'expired': expired,
             }
             data[name] = v
@@ -608,6 +620,21 @@ def add_cert(xapi, xpath, total, cert_name, content):
             total), file=sys.stderr)
 
     return True
+
+
+def set_common_name(xapi, xpath, data):
+    certificates = xpath.certificates()
+
+    for name, obj in data.items():
+        if obj['common-name'] is None:
+            entry = "/entry[@name='%s']" % name
+            kwargs = {
+                'xpath': certificates + entry,
+                'element': '<common-name></common-name>',
+            }
+            if args.debug:
+                print('set common-name', name, file=sys.stderr)
+            api_request(xapi, xapi.set, kwargs, 'success', '20')
 
 
 def show(xapi, xpath, data):
