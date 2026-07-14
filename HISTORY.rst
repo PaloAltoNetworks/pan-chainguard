@@ -1,10 +1,22 @@
 Release History
 ===============
 
+0.14.0 (2026-07-14)
+-------------------
+
+- bin/guard.py:
+
+  Workaround for PAN-321143.
+  Create certificate common-name XML node when non-existent.
+
+- bin/bashguard.py: Add --description to update snippet description.
+
+- Documentation fixes and improvements.
+
 0.13.1 (2026-06-12)
 -------------------
 
-- bashguard.py:
+- bin/bashguard.py:
 
   Skip certificates with import error "Failed to create xml node.".
   Workaround for ADI-56186.
