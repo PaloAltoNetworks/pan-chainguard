@@ -197,7 +197,6 @@ def main():
 async def main_loop():
     xapi = None
     panorama = False
-    hardware = False
 
     try:
         xapi = pan.xapi.PanXapi(tag=args.tag,
@@ -208,8 +207,6 @@ async def main_loop():
         if elem is not None:
             if elem.text == 'Panorama' or elem.text.startswith('M-'):
                 panorama = True
-            if elem.text.startswith('PA-') or elem.text.startswith('M-'):
-                hardware = True
         else:
             print("Can't get model", file=sys.stderr)
     except pan.xapi.PanXapiError as e:
@@ -263,9 +260,8 @@ async def main_loop():
             sys.exit(1)
         update_certs(xapi, xpath, data)
         # XXX PAN-321143
-        if hardware:
-            data = get_certs(xapi, xpath)
-            set_common_name(xapi, xpath, data)
+        data = get_certs(xapi, xpath)
+        set_common_name(xapi, xpath, data)
 
     if args.commit:
         commit(xapi, panorama)
