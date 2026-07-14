@@ -478,7 +478,8 @@ async def update_description(scm):
     kwargs = {'name': args.snippet}
     resp = await api_request(scm.snippets_list, kwargs, [200, 403])
     if resp.status == 403:
-        # XXX warning
+        print(("Warning: Can't get snippet to update description "
+               "(API service account permission problem?)"))
         return
 
     data = await resp.json()
@@ -498,6 +499,8 @@ async def update_description(scm):
         'description': description,
     }
     resp = await api_request(scm.snippet_replace, kwargs)
+
+    print(f'snippet description updated: "{description}"')
 
 
 async def show(scm, data):
