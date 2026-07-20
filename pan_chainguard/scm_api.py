@@ -34,6 +34,11 @@ from pan_chainguard.scm_error import ParsedResponse
 API_URL = 'https://api.strata.paloaltonetworks.com'
 OAUTH2_URL = 'https://auth.apps.paloaltonetworks.com'
 DEFAULT_LIMIT = 1000  # _all()
+TRANSIENT_REQUEST_ERRORS = (
+    # XXX version 3.11: This class was made an alias of TimeoutError.
+    asyncio.TimeoutError,
+)
+TRANSIENT_RETRY_DELAY = 1.0
 
 VerifyArg = Optional[Union[bool, str, Path]]
 
@@ -250,7 +255,6 @@ class ScmApi:
 
         return self.access_token
 
-    # XXX retry timeout error
     async def _request(self,
                        method: str,
                        path: str,
@@ -259,21 +263,48 @@ class ScmApi:
         url = self.api_url + path
         base_headers = dict(kwargs.pop('headers', {}))
 
-        for attempt in (1, 2):
+        retried_auth = False
+        retried_transient = False
+
+        while True:
             token = await self._ensure_authorization()
 
             headers = dict(base_headers)  # copy
             headers['Authorization'] = f'Bearer {token}'
 
-            resp = await self.session.request(method, url,
-                                              headers=headers, **kwargs)
+            resp = None
+            try:
+                resp = await self.session.request(method, url,
+                                                  headers=headers, **kwargs)
+                # force body read/cache inside retry boundary
+                # for possible timeout
+                await resp.text()
+            except TRANSIENT_REQUEST_ERRORS as e:
+                if resp is not None:
+                    resp.close()
+                if retried_transient:
+                    self.log(DEBUG1,
+                             'transient API request error after retry: %r', e)
+                    raise
 
-            if resp.status != 401 or attempt == 2:
+                retried_transient = True
+                self.log(DEBUG1,
+                         'transient API request error: %r; '
+                         'retrying once in %.1fs',
+                         e, TRANSIENT_RETRY_DELAY)
+                await asyncio.sleep(TRANSIENT_RETRY_DELAY)
+                continue
+
+            if resp.status != 401:
                 return resp
 
-            self.log(DEBUG2, '%s', 'access_token expired')
+            if retried_auth:
+                return resp
+
+            self.log(DEBUG1, '%s', 'access_token expired')
             resp.release()
             self.access_token = None
+            retried_auth = True
 
         raise AssertionError('unreachable')
 
