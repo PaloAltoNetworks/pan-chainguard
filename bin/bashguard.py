@@ -122,6 +122,8 @@ async def main_loop():
             total = 0
             if args.delete:
                 total += await delete_certs(scm, data)
+                if total and args.update:
+                    data = await get_certs(scm)
 
             if args.update:
                 if args.certs is None:
