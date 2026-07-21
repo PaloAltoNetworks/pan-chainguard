@@ -39,6 +39,7 @@ sys.path[:0] = [os.path.join(libpath, os.pardir)]
 from pan_chainguard import (title, __version__, user_agent,
                             DEBUG1, DEBUG2, DEBUG3)
 from pan_chainguard.scm_api import (ScmApi, ApiError, ArgsError,
+                                    AccessToken,
                                     API_URL, OAUTH2_URL)
 from pan_chainguard.scm_error import ParsedResponse
 import pan_chainguard.util
@@ -75,9 +76,9 @@ def main():
         handler.setFormatter(formatter)
         logger.addHandler(handler)
 
-    asyncio.run(main_loop())
+    ret = asyncio.run(main_loop())
 
-    sys.exit(0)
+    sys.exit(ret)
 
 
 async def main_loop():
@@ -95,6 +96,26 @@ async def main_loop():
                 timeout=args.timeout,
                 verify=args.verify,
                 **oauth_args) as scm:
+
+            if args.jwt:
+                resp = await scm.cloud_version_get()
+                if scm.access_token is None:
+                    print("Can't get access_token", file=sys.stderr)
+                    return 1
+
+                token = AccessToken.parse(scm.access_token)
+                if token.is_jwt:
+                    print('header:',
+                          json.dumps(token.header, indent=2, sort_keys=True))
+                    print('payload:',
+                          json.dumps(token.payload, indent=2, sort_keys=True))
+                    if args.verbose:
+                        print('signature: "%s"' % token.signature)
+                    else:
+                        print('signature length:', len(token.signature))
+                else:
+                    print('opaque token or invalid JWT:', token.decode_error)
+                return 0
 
             if args.debug:
                 resp = await scm.cloud_version_get()
@@ -128,10 +149,10 @@ async def main_loop():
             if args.update:
                 if args.certs is None:
                     print('--certs argument required', file=sys.stderr)
-                    sys.exit(1)
+                    return 1
                 if args.type is None:
                     print('--type argument required', file=sys.stderr)
-                    sys.exit(1)
+                    return 1
 
                 total += await update_certs(scm, data)
 
@@ -141,6 +162,9 @@ async def main_loop():
 
     except (ArgsError, ApiError, Exception) as e:
         print_exception(e, args.debug)
+        return 1
+
+    return 0
 
 
 def credentials(path: Path) -> dict:
@@ -673,7 +697,6 @@ def print_exception(exc, debug):
         limit = None
     x = traceback.format_exception(None, exc, exc.__traceback__, limit=limit)
     print(''.join(x), end='', file=sys.stderr)
-    sys.exit(1)
 
 
 async def api_request(func, kwargs, status=None):
@@ -791,6 +814,9 @@ def parse_args():
                         action='store_true',
                         help='show %s managed certificates in tree format' %
                         title)
+    parser.add_argument('--jwt',
+                        action='store_true',
+                        help='print JSON Web Token')
     parser.add_argument('--api-url',
                         metavar='URL',
                         help='''\

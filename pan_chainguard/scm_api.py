@@ -20,10 +20,11 @@
 import aiohttp
 import asyncio
 import base64
+from dataclasses import dataclass
 import json
 import logging
 from pathlib import Path
-from typing import AsyncIterator, Callable, Tuple, Union, Optional
+from typing import AsyncIterator, Any, Dict, Callable, Tuple, Union, Optional
 import ssl
 import sys
 
@@ -600,3 +601,60 @@ class ScmApi:
         resp = await self._request('PUT', path, json=data, **kwargs)
 
         return resp
+
+
+@dataclass(frozen=True)
+class AccessToken:
+    raw: str
+    is_jwt: bool = False
+    header: Optional[Dict[str, Any]] = None
+    payload: Optional[Dict[str, Any]] = None
+    signature: Optional[str] = None
+    decode_error: Optional[str] = None
+
+    @classmethod
+    def parse(cls, token: str) -> 'AccessToken':
+        parts = token.split('.')
+
+        if len(parts) != 3:
+            return cls(
+                raw=token,
+                decode_error=f'not a JWT: expected 3 parts, got {len(parts)}',
+            )
+
+        try:
+            header = cls._decode_json_part(parts[0])
+            payload = cls._decode_json_part(parts[1])
+        except ValueError as e:
+            return cls(
+                raw=token,
+                decode_error=f'not a JWT: {e}',
+            )
+
+        return cls(
+            raw=token,
+            is_jwt=True,
+            header=header,
+            payload=payload,
+            signature=parts[2],
+        )
+
+    @staticmethod
+    def _b64url_decode(s: str) -> bytes:
+        missing_padding = (-len(s)) % 4
+        padded = s + ('=' * missing_padding)
+        return base64.urlsafe_b64decode(padded)
+
+    @staticmethod
+    def _decode_json_part(part: str) -> Dict[str, Any]:
+        import binascii
+
+        try:
+            obj = json.loads(AccessToken._b64url_decode(part))
+        except (binascii.Error, UnicodeDecodeError, json.JSONDecodeError) as e:
+            raise ValueError(str(e)) from e
+
+        if not isinstance(obj, dict):
+            raise ValueError('JWT part decoded to non-object JSON')
+
+        return obj

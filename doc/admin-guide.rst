@@ -1074,6 +1074,7 @@ bashguard.py Usage
                            update snippet description
      --show                show pan-chainguard managed config
      --show-tree           show pan-chainguard managed certificates in tree format
+     --jwt                 print JSON Web Token
      --api-url URL         API URL
                            default https://api.strata.paloaltonetworks.com
      --oauth2-url URL      OAuth2 URL
