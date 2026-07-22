@@ -519,7 +519,7 @@ class ScmApi:
             self, *,
             folder: Optional[str] = None,
             snippet: Optional[str] = None,
-            data: Optional[str] = None,
+            data: Optional[Dict[str, Any]] = None,
             **kwargs) -> aiohttp.ClientResponse:
         base = '/config/security/v1'
         path = base + '/ssl-decryption-settings'
@@ -542,7 +542,7 @@ class ScmApi:
             self, *,
             folder: Optional[str] = None,
             snippet: Optional[str] = None,
-            data: Optional[str] = None,
+            data: Optional[Dict[str, Any]] = None,
             **kwargs) -> aiohttp.ClientResponse:
         base = '/config/security/v1'
         path = base + '/ssl-decryption-settings'
@@ -589,7 +589,7 @@ class ScmApi:
             id: Optional[str] = None,
             name: Optional[str] = None,
             description: Optional[str] = None,
-            data: Optional[str] = None,
+            data: Optional[Dict[str, Any]] = None,
             **kwargs) -> aiohttp.ClientResponse:
 
         base = '/config/setup/v1'
