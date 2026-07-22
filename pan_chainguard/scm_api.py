@@ -447,6 +447,9 @@ class ScmApi:
             self, *,
             id: Optional[str] = None,
             **kwargs) -> aiohttp.ClientResponse:
+        if id is None:
+            raise ArgsError('id required')
+
         base = '/config/identity/v1'
         path = base + f'/certificates/{id}'
 
@@ -591,6 +594,8 @@ class ScmApi:
             description: Optional[str] = None,
             data: Optional[Dict[str, Any]] = None,
             **kwargs) -> aiohttp.ClientResponse:
+        if id is None:
+            raise ArgsError('id required')
 
         base = '/config/setup/v1'
         path = base + f'/snippets/{id}'
