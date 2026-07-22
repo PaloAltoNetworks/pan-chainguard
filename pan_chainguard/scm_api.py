@@ -237,7 +237,10 @@ class ScmApi:
                 raise ApiError(
                     f'OAuth2 token response was not valid JSON: {text}') from e
 
-        x = {k: v for k, v in payload.items() if k not in 'access_token'}
+        x = {
+            k: '******' if k in ['access_token'] else v
+            for k, v in payload.items()
+        }
         self.log(DEBUG2, '%s', x)
 
         access_token = payload.get('access_token')
