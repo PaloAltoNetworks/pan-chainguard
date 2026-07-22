@@ -190,7 +190,7 @@ class ScmApi:
             kwargs['timeout'] = timeout
         if ssl_context is not None:
             kwargs['connector'] = aiohttp.TCPConnector(
-                ssl_context=self.ssl_context)
+                ssl_context=ssl_context)
 
         if (logging.getLogger(__name__).getEffectiveLevel() in
            [DEBUG1, DEBUG2, DEBUG3]):
