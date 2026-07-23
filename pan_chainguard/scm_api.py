@@ -486,7 +486,6 @@ class ScmApi:
             data['certificate_file'] = base64.b64encode(
                 certificate_pem.encode()
             ).decode()
-        data['format'] = 'pem'  # XXX
 
         resp = await self._request('POST', path, json=data, **kwargs)
 
