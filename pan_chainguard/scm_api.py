@@ -434,8 +434,9 @@ class ScmApi:
                 func=self.certificates_get, **kwargs):
             # if folder, only want items for that folder,
             # and not from snippet association
-            if folder is not None and (item['folder'] != folder or
-                                       item.get('snippet') is not None):
+            if folder is not None and (
+                    item.get('folder') != folder or
+                    item.get('snippet') is not None):
                 continue
 
             yield item
