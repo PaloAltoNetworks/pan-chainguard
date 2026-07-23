@@ -232,8 +232,8 @@ class ScmApi:
                 )
 
             try:
-                payload = await resp.json()
-            except Exception as e:
+                payload = json.loads(text)
+            except ValueError as e:
                 raise ApiError(
                     f'OAuth2 token response was not valid JSON: {text}') from e
 
