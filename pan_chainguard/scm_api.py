@@ -237,6 +237,10 @@ class ScmApi:
                 raise ApiError(
                     f'OAuth2 token response was not valid JSON: {text}') from e
 
+            if not isinstance(payload, dict):
+                raise ApiError(
+                    f'OAuth2 token response was not a JSON object: {text}')
+
         x = {
             k: '******' if k in ['access_token'] else v
             for k, v in payload.items()
