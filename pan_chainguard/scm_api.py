@@ -658,12 +658,12 @@ class AccessToken:
         padded = s + ('=' * missing_padding)
         return base64.urlsafe_b64decode(padded)
 
-    @staticmethod
-    def _decode_json_part(part: str) -> Dict[str, Any]:
+    @classmethod
+    def _decode_json_part(cls, part: str) -> Dict[str, Any]:
         import binascii
 
         try:
-            obj = json.loads(AccessToken._b64url_decode(part))
+            obj = json.loads(cls._b64url_decode(part))
         except (binascii.Error, UnicodeDecodeError, json.JSONDecodeError) as e:
             raise ValueError(str(e)) from e
 
