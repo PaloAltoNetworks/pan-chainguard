@@ -366,7 +366,7 @@ def get_certs(xapi, xpath):
     kwargs = {'xpath': certificates}
     api_request(xapi, xapi.get, kwargs, 'success', ['7', '19'])
     if xapi.status_code == '7':
-        return []
+        return {}
 
     entries = xapi.element_root.findall('./result/certificate/entry')
 
