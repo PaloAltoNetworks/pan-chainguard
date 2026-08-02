@@ -389,15 +389,15 @@ def get_certs(xapi, xpath):
             if match:
                 issuer_cn = match.group(1)
                 issuer_cn = re.sub(r'\\(.)', r'\1', match.group(1))
-            expiry = entry.find('./expiry-epoch').text
+
+            elem = entry.find('./expiry-epoch')
+            expiry = None if elem is None else elem.text
             try:
-                if time.time() > int(expiry):
-                    expired = True
-                else:
-                    expired = False
-            except ValueError as e:
-                print('%s expiry-epoch %s: %s' % (
+                expired = time.time() > int(expiry)
+            except (TypeError, ValueError) as e:
+                print('%s expiry-epoch %r: %s' % (
                     name, expiry, e), file=sys.stderr)
+                expired = None
 
             common_name = None
             if entry.find('./common-name') is not None:
@@ -640,7 +640,7 @@ def show(xapi, xpath, data):
 
     for x in data:
         expired = ''
-        if data[x]['expired']:
+        if data[x]['expired'] is True:  # can be None
             num_expired += 1
             expired = ' (expired)'
         if data[x]['subject'] == data[x]['issuer']:
