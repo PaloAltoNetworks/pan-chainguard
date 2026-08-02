@@ -259,9 +259,10 @@ async def main_loop():
             print('--type argument required', file=sys.stderr)
             sys.exit(1)
         update_certs(xapi, xpath, data)
-        # XXX PAN-321143
-        data = get_certs(xapi, xpath)
-        set_common_name(xapi, xpath, data)
+        if not args.dry_run:
+            # XXX PAN-321143
+            data = get_certs(xapi, xpath)
+            set_common_name(xapi, xpath, data)
 
     if args.commit:
         commit(xapi, panorama)
