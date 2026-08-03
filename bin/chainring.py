@@ -262,11 +262,9 @@ def tree_max_depth(tree: Tree, max_depth: int) -> Tree:
 # The first 26 characters of the SHA-256 fingerprint (length 64) are
 # used for the PAN-OS certificate name; test name for collisions.
 def test_collisions(tree):
-    data = pan_chainguard.util.tree_to_dict(tree=tree)
-
     names = defaultdict(list)
-    for node in data['nodes']:
-        ident = node.get('identifier')
+    for node in tree.all_nodes():
+        ident = node.identifier
         if ident:
             name = pan_chainguard.util.hash_to_name(sha256=ident)
             names[name].append(ident)
