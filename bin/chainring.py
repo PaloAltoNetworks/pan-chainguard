@@ -203,16 +203,17 @@ def main():
 async def main_loop():
     tree = read_tree()
 
-    if args.depth is not None:
-        tree = tree_max_depth(tree, args.depth)
-
     if args.test_collisions:
         if not test_collisions(tree):
             return 1
 
+    output_tree = tree
+    if args.depth is not None:
+        output_tree = tree_max_depth(tree, args.depth)
+
     if args.format:
         for format in args.format:
-            formats[format](tree)
+            formats[format](output_tree)
 
     if args.fingerprint:
         for x in args.fingerprint:
