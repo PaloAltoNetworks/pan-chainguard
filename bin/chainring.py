@@ -289,6 +289,10 @@ def lookup(tree, sha256):
     if s.startswith(pan_chainguard.util.NAME_PREFIX):
         s = s[len(pan_chainguard.util.NAME_PREFIX):]
 
+    if not s:
+        print('Invalid fingerprint: empty', file=sys.stderr)
+        return
+
     nodes = []
     if len(s) == 64:
         node = tree.get_node(s)
