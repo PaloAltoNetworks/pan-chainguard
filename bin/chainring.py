@@ -215,11 +215,13 @@ async def main_loop():
         for format in args.format:
             formats[format](output_tree)
 
+    found_all = True
     if args.fingerprint:
         for x in args.fingerprint:
-            lookup(tree, x)
+            if not lookup(tree, x):
+                found_all = False
 
-    return 0
+    return 0 if found_all else 1
 
 
 def read_tree():
@@ -307,12 +309,14 @@ def lookup(tree, sha256):
 
     if not nodes:
         print('Not found: %s' % s, file=sys.stderr)
-        return
+        return False
 
     for node in nodes:
         data = node.data
         filtered_data = {k: v for k, v in data.items() if v != ''}
         print(pprint.pformat(filtered_data))
+
+    return True
 
 
 def parse_args():
