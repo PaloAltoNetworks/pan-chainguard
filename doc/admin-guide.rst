@@ -1074,6 +1074,8 @@ bashguard.py Usage
                            update snippet description
      --show                show pan-chainguard managed config
      --show-tree           show pan-chainguard managed certificates in tree format
+     --xml [MASK]          show pan-chainguard managed certificates in XML
+                           001 use Panorama-compatible certificate names
      --jwt                 print JSON Web Token
      --api-url URL         API URL
                            default https://api.strata.paloaltonetworks.com

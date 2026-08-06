@@ -20,7 +20,7 @@ import argparse
 import asyncio
 from collections import defaultdict
 from datetime import datetime, timezone
-from enum import Enum, auto
+from enum import Enum, IntFlag, auto
 import json
 import logging
 import os
@@ -32,6 +32,7 @@ import time
 from treelib import Node, Tree
 import traceback
 from typing import Tuple, Union
+import xml.etree.ElementTree as ET
 
 libpath = os.path.dirname(os.path.abspath(__file__))
 sys.path[:0] = [os.path.join(libpath, os.pardir)]
@@ -47,7 +48,27 @@ import pan_chainguard.util
 # use 63 length name
 NAME_RE = pan_chainguard.util.NAME_RE_SCM
 
+CERTIFICATE_XML_KEYS = (
+    'issuer',
+    'not_valid_after',
+    'common_name',
+    'expiry_epoch',
+    'subject',
+    'subject_hash',
+    'issuer_hash',
+    'not_valid_before',
+    'ca',
+    'public_key',
+    'algorithm',
+    #  'common_name_int',
+    #  'subject_int',
+)
+
 args = None
+
+
+class XmlOptions(IntFlag):
+    PANORAMA_NAMES = 0o001
 
 
 class Description(Enum):
@@ -125,7 +146,7 @@ async def main_loop():
                         print('Cloud Management Version',
                               x['software_version'], file=sys.stderr)
 
-            if any([args.show, args.show_tree,
+            if any([args.show, args.show_tree, args.xml is not None,
                     args.update_trusted, args.delete, args.update]):
                 data = await get_certs(scm)
                 if args.debug > 2 and data:
@@ -136,6 +157,9 @@ async def main_loop():
 
             if args.show_tree:
                 await show_tree(scm, data)
+
+            if args.xml is not None:
+                show_xml(data, options=args.xml, pretty=args.verbose)
 
             if args.update_trusted:
                 await update_trusted_root_cas(scm, data.keys(), quiet=False)
@@ -249,20 +273,70 @@ async def get_certs(scm):
                 name, expiry, e), file=sys.stderr)
             expired = None
 
-        v = {
+        missing = [
+            key for key in CERTIFICATE_XML_KEYS
+            if key not in item
+        ]
+        if missing and args.debug:
+            print('%s missing XML fields: %s' % (
+                name, ', '.join(missing)), file=sys.stderr)
+
+        v = {key: item[key] for key in CERTIFICATE_XML_KEYS
+             if key in item}
+        # XXX for cert with no common name this is {}
+        if not isinstance(v['common_name'], str):
+            v['common_name'] = ''
+        v.update({
             'cert-name': name,
             'id':  item['id'],
-            'subject': subject,
             'subject-cn': subject_cn,
             'subject-hash': item['subject_hash'],
-            'issuer': issuer,
             'issuer-cn': issuer_cn,
             'issuer-hash': item['issuer_hash'],
             'expired': expired,
-        }
+        })
         data[name] = v
 
     return data
+
+
+def show_xml(data, options=XmlOptions(0), pretty=False):
+    root = ET.Element('config')
+    shared = ET.SubElement(root, 'shared')
+    certificate = ET.SubElement(shared, 'certificate')
+    certificate_names = []
+
+    for name, obj in data.items():
+        if options & XmlOptions.PANORAMA_NAMES:
+            name = name[:31]
+
+        certificate_names.append(name)
+        entry = ET.SubElement(certificate, 'entry', {'name': name})
+
+        for key in CERTIFICATE_XML_KEYS:
+            if key not in obj:
+                continue
+            element = ET.SubElement(entry, key.replace('_', '-'))
+            value = obj[key]
+            if key == 'ca':
+                value = 'yes' if value else 'no'
+            element.text = '' if value is None else str(value)
+
+    ssl_decrypt = ET.SubElement(shared, 'ssl-decrypt')
+    trusted_root_ca = ET.SubElement(
+        ssl_decrypt, 'trusted-root-CA')
+
+    for name in certificate_names:
+        member = ET.SubElement(trusted_root_ca, 'member')
+        member.text = name
+
+    tree = ET.ElementTree(root)
+    if pretty:
+        ET.indent(tree, space='  ')
+    tree.write(sys.stdout.buffer,
+               encoding='utf-8',
+               short_empty_elements=False)
+    sys.stdout.buffer.write(b'\n')
 
 
 async def delete_certs(scm, data) -> int:
@@ -763,6 +837,31 @@ def parse_args():
         except OSError as e:
             raise argparse.ArgumentTypeError(f'{path}: {e}') from e
 
+    def xml_options(value: str) -> XmlOptions:
+        def all_xml_options() -> XmlOptions:
+            options = XmlOptions(0)
+            for option in XmlOptions:
+                options |= option
+                return options
+
+        try:
+            mask = int(value, 8)
+        except ValueError:
+            raise argparse.ArgumentTypeError(
+                'XML options must be an octal value')
+
+        if not 0 <= mask <= 0o377:
+            raise argparse.ArgumentTypeError(
+                'XML options must be between 000 and 377')
+
+        supported = int(all_xml_options())
+        unsupported = mask & ~supported
+        if unsupported:
+            raise argparse.ArgumentTypeError(
+                'unsupported XML option bits: %03o' % unsupported)
+
+        return XmlOptions(mask)
+
     parser = argparse.ArgumentParser(
         usage='%(prog)s [options]',
         description='update SCM trusted CAs',
@@ -813,6 +912,14 @@ def parse_args():
                         action='store_true',
                         help='show %s managed certificates in tree format' %
                         title)
+    parser.add_argument('--xml',
+                        nargs='?',
+                        const=XmlOptions(0),
+                        default=None,
+                        type=xml_options,
+                        metavar='MASK',
+                        help=(f'show {title} managed certificates in XML\n'
+                              '001 use Panorama-compatible certificate names'))
     parser.add_argument('--jwt',
                         action='store_true',
                         help='print JSON Web Token')
