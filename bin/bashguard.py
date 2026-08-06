@@ -284,7 +284,8 @@ async def get_certs(scm):
         v = {key: item[key] for key in CERTIFICATE_XML_KEYS
              if key in item}
         # XXX for cert with no common name this is {}
-        if not isinstance(v['common_name'], str):
+        if ('common_name' in v and
+           not isinstance(v['common_name'], str)):
             v['common_name'] = ''
         v.update({
             'cert-name': name,
