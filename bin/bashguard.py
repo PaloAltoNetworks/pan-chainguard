@@ -842,7 +842,7 @@ def parse_args():
             options = XmlOptions(0)
             for option in XmlOptions:
                 options |= option
-                return options
+            return options
 
         try:
             mask = int(value, 8)
