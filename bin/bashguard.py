@@ -120,12 +120,8 @@ async def main_loop():
                 **oauth_args) as scm:
 
             if args.jwt:
-                resp = await scm.cloud_version_get()
-                if scm.access_token is None:
-                    print("Can't get access_token", file=sys.stderr)
-                    return 1
-
-                token = AccessToken.parse(scm.access_token)
+                access_token = await scm.client_credentials_grant()
+                token = AccessToken.parse(access_token)
                 if token.is_jwt:
                     print('header:',
                           json.dumps(token.header, indent=2, sort_keys=True))
