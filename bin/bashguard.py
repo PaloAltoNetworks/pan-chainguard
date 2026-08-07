@@ -199,11 +199,22 @@ def credentials(path: Path) -> dict:
         print(f'{path}: missing keys: {", ".join(sorted(missing))}',
               file=sys.stderr)
         sys.exit(1)
+
     extra = data.keys() - set(required)
     if extra:
         print(f'{path}: extra keys: {", ".join(sorted(extra))}',
               file=sys.stderr)
         sys.exit(1)
+
+    for key in required:
+        if not isinstance(data[key], str):
+            print(f'{path}: {key}: expected string; '
+                  f'got {type(data[key]).__name__}',
+                  file=sys.stderr)
+            sys.exit(1)
+        if not data[key]:
+            print(f'{path}: {key}: empty value', file=sys.stderr)
+            sys.exit(1)
 
     return data
 
