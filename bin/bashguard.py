@@ -27,6 +27,7 @@ import os
 from pathlib import Path
 import pprint
 import re
+import stat
 import sys
 import time
 from treelib import Node, Tree
@@ -192,6 +193,16 @@ async def main_loop():
 
 
 def credentials(path: Path) -> dict:
+    def check_credentials_permissions(path: Path) -> None:
+        if os.name != 'posix':
+            return
+
+        mode = stat.S_IMODE(path.stat().st_mode)
+        # Allow group read, but warn for group write/execute or other access
+        if mode & 0o037:
+            print(f'{path}: warning: credentials file permissions are '
+                  f'{mode:04o}', file=sys.stderr)
+
     data = load_json_file(path)
     required = ['tsg_id', 'client_id', 'client_secret']
     missing = set(required) - data.keys()
@@ -215,6 +226,8 @@ def credentials(path: Path) -> dict:
         if not data[key]:
             print(f'{path}: {key}: empty value', file=sys.stderr)
             sys.exit(1)
+
+    check_credentials_permissions(path)
 
     return data
 
