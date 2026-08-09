@@ -231,13 +231,13 @@ def load_moz_certs(input: bytes):
     try:
         data = json.loads(input)
     except ValueError as e:
-        print('%s: %s' % (path, e), file=sys.stderr)
+        print('%s intermediates: %s' % (MOZ, e), file=sys.stderr)
         sys.exit(1)
 
     moz_certs = {}
     for x in data['data']:
         if x['derHash'] in moz_certs:
-            print('Duplicate derHash: %s', x['derHash'], file=sys.stderr)
+            print('Duplicate derHash: %s' % x['derHash'], file=sys.stderr)
         else:
             moz_certs[x['derHash']] = x
 
