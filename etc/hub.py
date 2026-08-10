@@ -91,11 +91,11 @@ async def main_loop(specs):
     cg_certs = load_cert_archive(outputs['certs'])
     cg_moz_certs = certs_in_tree(cg_certs, cg_moz_tree, MOZ)
     cg_moz_certs_info = get_cert_info(cg_moz_certs)
-    cg_hash_index = build_hash_index(cg_moz_certs_info)
+    cg_moz_hash_index = build_hash_index(cg_moz_certs_info)
 
     moz_certs = load_moz_certs(outputs['moz_int'])
 
-    r = await diff(onecrl, moz_certs, cg_moz_certs_info, cg_hash_index)
+    r = await diff(onecrl, moz_certs, cg_moz_certs_info, cg_moz_hash_index)
 
     return r
 
@@ -247,19 +247,19 @@ def load_moz_certs(input: bytes):
     return moz_certs
 
 
-async def diff(onecrl, moz_certs, cg_moz_certs_info, cg_hash_index):
+async def diff(onecrl, moz_certs, cg_moz_certs_info, cg_moz_hash_index):
     r = 0
 
     missing = []
     for x in moz_certs:
-        if x not in cg_hash_index:
+        if x not in cg_moz_hash_index:
             missing.append(moz_certs[x])
         else:
-            if cg_hash_index[x]['cert_type'] == 'root':
+            if cg_moz_hash_index[x]['cert_type'] == 'root':
                 if args.debug:
                     print('%s intermediate also in root store' % MOZ,
-                          cg_hash_index[x]['cert_fingerprint_sha256'],
-                          cg_hash_index[x]['cert_der_sha256_b64'])
+                          cg_moz_hash_index[x]['cert_fingerprint_sha256'],
+                          cg_moz_hash_index[x]['cert_der_sha256_b64'])
                 missing.append(moz_certs[x])
 
     if missing:
