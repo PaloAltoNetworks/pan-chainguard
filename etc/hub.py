@@ -63,6 +63,13 @@ class InputSpec:
     path: Optional[Path]
 
 
+@dataclass(frozen=True)
+class MozillaIntermediate:
+    record: dict
+    cert: x509.Certificate
+    sha256: str
+
+
 def main():
     global args
     args, specs = parse_args()
@@ -269,7 +276,13 @@ async def diff(onecrl, moz_certs, cg_moz_certs_info, cg_moz_hash_index):
         if args.debug > 1:
             print(pprint.pformat(missing), file=sys.stderr)
 
-        await mozilla_missing(onecrl, missing)
+        moz_missing = await mozilla_missing(missing)
+        for sha256, item in moz_missing.items():
+            onecrl_match, msg = onecrl_check(sha256, onecrl)
+            if onecrl_match:
+                print('%s %s' % (sha256, msg))
+            else:
+                print(sha256)
 
     missing = []
     for x in cg_moz_certs_info:
@@ -287,9 +300,11 @@ async def diff(onecrl, moz_certs, cg_moz_certs_info, cg_moz_hash_index):
     return r
 
 
-async def mozilla_missing(onecrl, missing):
+async def mozilla_missing(missing) -> dict[str, MozillaIntermediate]:
     CDN_BASE = 'https://firefox-settings-attachments.cdn.mozilla.net/'
     timeout = aiohttp.ClientTimeout(total=DOWNLOAD_TIMEOUT)
+
+    moz_missing: dict[str, MozillaIntermediate] = {}
 
     async with aiohttp.ClientSession(timeout=timeout) as session:
         for x in missing:
@@ -313,30 +328,51 @@ async def mozilla_missing(onecrl, missing):
             pem_cert = content_or_err
             if attachment['size'] != len(pem_cert):
                 print('PEM size mismatch: %s' % x, file=sys.stderr)
+                continue
 
-            hash = hashlib.sha256(pem_cert).hexdigest()
-            if attachment['hash'] != hash:
+            pem_hash = hashlib.sha256(pem_cert).hexdigest()
+            if attachment['hash'] != pem_hash:
                 print('PEM hash mismatch: %s' % x, file=sys.stderr)
+                continue
 
             cert = load_pem_cert(pem_cert)
+            if cert is None:
+                continue
+
             sha256 = fingerprint_sha256(cert)
             if args.debug:
                 print('downloaded', sha256, der_hash)
 
-            lst = []
-            r = onecrl.get(sha256=sha256)
-            if r is not None:
-                s = 'in OneCRL "%s"' % (
-                    r['Revocation Status'])
-                if r['Comments']:
-                    s += ' "%s"' % (
-                        r['Comments'].replace('\r\n', ' '))
-                lst.append(s)
+            cert_der_hash = der_sha256_b64(cert)
+            if cert_der_hash != der_hash:
+                print('DER hash mismatch: %s != %s' % (
+                    cert_der_hash, der_hash), file=sys.stderr)
+                continue
 
-            msg = sha256
-            msg += ' ' + ' '.join(lst) if lst else ''
+            moz_missing[sha256] = MozillaIntermediate(
+                record=x,
+                cert=cert,
+                sha256=sha256)
 
-            print(msg)
+        return moz_missing
+
+
+def onecrl_check(sha256, onecrl):
+    lst = []
+    r = onecrl.get(sha256=sha256)
+    if r is not None:
+        s = 'in OneCRL "%s"' % (
+            r['Revocation Status'])
+        if r['Comments']:
+            s += ' "%s"' % (
+                r['Comments'].replace('\r\n', ' '))
+        lst.append(s)
+
+        msg = ' '.join(lst) if lst else ''
+
+        return True, msg
+
+    return False, None
 
 
 async def resolve_inputs(
