@@ -102,7 +102,8 @@ async def main_loop(specs):
 
     moz_certs = load_moz_certs(outputs['moz_int'])
 
-    r = await diff(onecrl, moz_certs, cg_moz_certs_info, cg_moz_hash_index)
+    r = await diff(onecrl, trust, moz_certs, cg_tree, cg_certs,
+                   cg_moz_certs_info, cg_moz_hash_index)
 
     return r
 
@@ -254,7 +255,8 @@ def load_moz_certs(input: bytes):
     return moz_certs
 
 
-async def diff(onecrl, moz_certs, cg_moz_certs_info, cg_moz_hash_index):
+async def diff(onecrl, trust, moz_certs, cg_tree, cg_certs,
+               cg_moz_certs_info, cg_moz_hash_index):
     r = 0
 
     missing = []
@@ -278,11 +280,25 @@ async def diff(onecrl, moz_certs, cg_moz_certs_info, cg_moz_hash_index):
 
         moz_missing = await mozilla_missing(missing)
         for sha256, item in moz_missing.items():
+            lst = []
+
             onecrl_match, msg = onecrl_check(sha256, onecrl)
             if onecrl_match:
-                print('%s %s' % (sha256, msg))
-            else:
-                print(sha256)
+                lst.append(msg)
+
+            if sha256 in cg_certs:
+                cert_type, _ = cg_certs[sha256]
+                lst.append('in %s as %s' % (title, cert_type))
+
+                if cert_type == 'intermediate':
+                    root_sha256 = root_ancestor(cg_tree, sha256)
+                    root_ok, msg = mozilla_root_check(root_sha256, trust)
+                    if not root_ok:
+                        lst.append(msg)
+
+            msg = sha256
+            msg += ' ' + ' '.join(lst) if lst else ''
+            print(msg)
 
     missing = []
     for x in cg_moz_certs_info:
@@ -373,6 +389,45 @@ def onecrl_check(sha256, onecrl):
         return True, msg
 
     return False, None
+
+
+def root_ancestor(tree: Tree, sha256: str) -> str:
+    node = tree.get_node(sha256)
+    if node is None:
+        raise ValueError('certificate not in tree: %s' % sha256)
+
+    while True:
+        parent = tree.parent(node.identifier)
+        if parent is None:
+            raise ValueError('certificate has no root ancestor: %s' % sha256)
+
+        if parent.identifier == tree.root:
+            return node.identifier
+
+        node = parent
+
+
+def mozilla_root_check(sha256, trust):
+    status_bits = trust.root_status_bits_flag(sha256=sha256)
+    if status_bits is None:
+        return False, 'root %s not in %s root trust settings' % (
+            sha256, MOZ)
+
+    if RootStatusBits.MOZILLA not in status_bits:
+        return False, 'root %s not included by %s' % (
+            sha256, MOZ)
+
+    trust_bits = trust.mozilla_trust_bits(sha256=sha256)
+    if trust_bits is None:
+        return False, 'root %s has no %s trust bits' % (
+            sha256, MOZ)
+
+    if TrustBits.SERVER_AUTHENTICATION not in trust_bits:
+        return False, (
+            'root %s not trusted by %s for Server Authentication' %
+            (sha256, MOZ))
+
+    return True, None
 
 
 async def resolve_inputs(
