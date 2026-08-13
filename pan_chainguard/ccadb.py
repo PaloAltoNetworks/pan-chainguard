@@ -120,7 +120,11 @@ def valid_to(row: dict[str, str]) -> Tuple[bool, Union[str, None]]:
 
 
 def valid_from_to(row: dict[str, str]) -> Tuple[bool, Union[str, None]]:
-    return valid_from(row) and valid_to(row)
+    ret, err = valid_from(row)
+    if not ret:
+        return ret, err
+
+    return valid_to(row)
 
 
 def revoked(row: dict[str, str]) -> Tuple[bool, Union[str, None]]:
