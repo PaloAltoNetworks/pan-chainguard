@@ -20,6 +20,7 @@ import aiohttp
 import argparse
 import asyncio
 import base64
+import csv
 from dataclasses import dataclass
 import hashlib
 import io
@@ -46,11 +47,12 @@ sys.path[:0] = [os.path.join(libpath, os.pardir)]
 
 from pan_chainguard import title, __version__
 from pan_chainguard.ccadb import (CcadbRootTrustSettings, CcadbError,
-                                  RootStatusBits, TrustBits)
+                                  RootStatusBits, TrustBits,
+                                  revoked, valid_from_to, derived_trust_bits)
 from pan_chainguard.mozilla import MozillaError, MozillaOneCrl
 import pan_chainguard.util
 
-DOWNLOAD_TIMEOUT = 5.0  # total
+DOWNLOAD_TIMEOUT = 30.0  # total
 MOZ = 'mozilla'
 args = None
 
@@ -91,6 +93,7 @@ async def main_loop(specs):
 
     trust = load_root_trust(outputs['trust_settings'])
     onecrl = load_onecrl(outputs['onecrl'])
+    ccadb_certs = load_ccadb_certs(outputs['ccadb'])
 
     cg_tree = load_cert_tree(outputs['tree'])
     cg_moz_tree = mozilla_tree(cg_tree, trust)
@@ -102,7 +105,7 @@ async def main_loop(specs):
 
     moz_certs = load_moz_certs(outputs['moz_int'])
 
-    r = await diff(onecrl, trust, moz_certs, cg_tree, cg_certs,
+    r = await diff(onecrl, ccadb_certs, trust, moz_certs, cg_tree, cg_certs,
                    cg_moz_certs_info, cg_moz_hash_index)
 
     return r
@@ -128,6 +131,28 @@ def load_onecrl(input: bytes):
         sys.exit(1)
 
     return onecrl
+
+
+def load_ccadb_certs(input: bytes):
+    certs = {}
+
+    try:
+        with pan_chainguard.util.open_csv_source(input) as csvfile:
+            reader = csv.DictReader(csvfile, dialect='unix')
+            fieldnames = set(reader.fieldnames or [])
+            if 'SHA-256 Fingerprint' not in fieldnames:
+                print('CCADB all certificates: Invalid CSV',
+                      file=sys.stderr)
+                sys.exit(1)
+
+            for row in reader:
+                sha256 = row['SHA-256 Fingerprint']
+                certs.setdefault(sha256, []).append(row)
+    except OSError as e:
+        print('CCADB all certificates: %s' % e, file=sys.stderr)
+        sys.exit(1)
+
+    return certs
 
 
 def load_cert_tree(input: bytes):
@@ -255,7 +280,7 @@ def load_moz_certs(input: bytes):
     return moz_certs
 
 
-async def diff(onecrl, trust, moz_certs, cg_tree, cg_certs,
+async def diff(onecrl, ccadb_certs, trust, moz_certs, cg_tree, cg_certs,
                cg_moz_certs_info, cg_moz_hash_index):
     r = 0
 
@@ -295,6 +320,95 @@ async def diff(onecrl, trust, moz_certs, cg_tree, cg_certs,
                     root_ok, msg = mozilla_root_check(root_sha256, trust)
                     if not root_ok:
                         lst.append(msg)
+
+            if not onecrl_match and sha256 not in cg_certs:
+                if sha256 not in ccadb_certs:
+                    lst.append('not in CCADB')
+                else:
+                    lst.append('in CCADB')
+
+                    revoked_rows = []
+                    invalid_rows = []
+                    no_parent_rows = []
+                    root_with_parent_rows = []
+                    missing_server_auth_rows = []
+
+                    rows = ccadb_certs[sha256]
+
+                    for row in rows:
+                        ret, err = revoked(row)
+                        if ret:
+                            revoked_rows.append((row, err))
+                            continue
+
+                        ret, err = valid_from_to(row)
+                        if not ret:
+                            invalid_rows.append((row, err))
+                            continue
+
+                        cert_type = row['Certificate Record Type']
+                        parent_sha256 = row['Parent SHA-256 Fingerprint']
+
+                        if cert_type == 'Root Certificate' and parent_sha256:
+                            root_with_parent_rows.append(row)
+                            continue
+
+                        if cert_type == 'Intermediate Certificate':
+                            if not parent_sha256:
+                                no_parent_rows.append(row)
+                                continue
+                            else:
+                                trust_bits = derived_trust_bits(row)
+                                if TrustBits.SERVER_AUTHENTICATION not in trust_bits:
+                                    missing_server_auth_rows.append((row, trust_bits))
+
+                    if revoked_rows:
+                        if len(revoked_rows) == len(rows):
+                            lst.append('revoked "%s"' % revoked_rows[0][1])
+                        else:
+                            lst.append('revoked %d/%d records' % (
+                                len(revoked_rows), len(rows)))
+
+                    if invalid_rows:
+                        if len(invalid_rows) == len(rows):
+                            lst.append('invalid "%s"' % invalid_rows[0][1])
+                        else:
+                            lst.append('invalid %d/%d records' % (
+                                len(invalid_rows), len(rows)))
+
+                    if no_parent_rows:
+                        if len(no_parent_rows) == len(rows):
+                            lst.append('intermediate with no parent')
+                        else:
+                            lst.append('intermediate with no parent %d/%d records' % (
+                                len(no_parent_rows), len(rows)))
+
+                    if root_with_parent_rows:
+                        if len(root_with_parent_rows) == len(rows):
+                            lst.append('root with parent')
+                        else:
+                            lst.append('root with parent %d/%d records' % (
+                                len(root_with_parent_rows), len(rows)))
+
+                    if missing_server_auth_rows:
+                        if len(missing_server_auth_rows) == len(rows):
+                            lst.append(
+                                'derived trust bits %s do not include Server Authentication' %
+                                missing_server_auth_rows[0][1])
+                        else:
+                            lst.append(
+                                'missing Server Authentication derived trust bit '
+                                'in %d/%d records' %
+                                (len(missing_server_auth_rows), len(rows)))
+
+                    if len(rows) > 1:
+                        duplicates = [
+                            '%s %s' % (
+                                row['Certificate Record Type'],
+                                row['Salesforce Record ID'])
+                            for row in rows
+                        ]
+                        lst.append('duplicate records [%s]' % ', '.join(duplicates))
 
             msg = sha256
             msg += ' ' + ' '.join(lst) if lst else ''
@@ -408,14 +522,15 @@ def root_ancestor(tree: Tree, sha256: str) -> str:
 
 
 def mozilla_root_check(sha256, trust):
-    status_bits = trust.root_status_bits_flag(sha256=sha256)
-    if status_bits is None:
+    r = trust.get(sha256=sha256)
+    if r is None:
         return False, 'root %s not in %s root trust settings' % (
             sha256, MOZ)
 
-    if RootStatusBits.MOZILLA not in status_bits:
-        return False, 'root %s not included by %s' % (
-            sha256, MOZ)
+    status = r['Mozilla Status']
+    if status != 'Included':
+        return False, 'root %s %s status "%s"' % (
+            sha256, MOZ, status)
 
     trust_bits = trust.mozilla_trust_bits(sha256=sha256)
     if trust_bits is None:
@@ -585,6 +700,10 @@ def parse_args():
                         metavar='PATH',
                         type=Path,
                         help='Mozilla OneCRL CSV path')
+    parser.add_argument('-c', '--ccadb',
+                        metavar='PATH',
+                        type=Path,
+                        help='CCADB all certificate information CSV path')
     parser.add_argument('--verbose',
                         action='store_true',
                         help='enable verbosity')
@@ -601,23 +720,26 @@ def parse_args():
 
     URL_BY_DEST = {
         'certs':
-        ('https://raw.githubusercontent.com/PaloAltoNetworks/'
-         'pan-chainguard-content/refs/heads/main/latest-certs/'
-         'certificates-new.tgz'),
+        'https://raw.githubusercontent.com/PaloAltoNetworks/'
+        'pan-chainguard-content/refs/heads/main/latest-certs/'
+        'certificates-new.tgz',
         'tree':
-        ('https://raw.githubusercontent.com/PaloAltoNetworks/'
-         'pan-chainguard-content/refs/heads/main/latest-certs/'
-         'certificate-tree.json'),
+        'https://raw.githubusercontent.com/PaloAltoNetworks/'
+        'pan-chainguard-content/refs/heads/main/latest-certs/'
+        'certificate-tree.json',
         'moz_int':
-        ('https://firefox.settings.services.mozilla.com/'
-         'v1/buckets/security-state/collections/'
-         'intermediates/records'),
+        'https://firefox.settings.services.mozilla.com/'
+        'v1/buckets/security-state/collections/'
+        'intermediates/records',
         'trust_settings':
-        ('https://ccadb.my.salesforce-sites.com/ccadb/'
-         'AllIncludedRootCertsCSV'),
+        'https://ccadb.my.salesforce-sites.com/ccadb/'
+        'AllIncludedRootCertsCSV',
         'onecrl':
-        ('https://ccadb.my.salesforce-sites.com/mozilla/'
-         'IntermediateCertsInOneCRLReportCSV'),
+        'https://ccadb.my.salesforce-sites.com/mozilla/'
+        'IntermediateCertsInOneCRLReportCSV',
+        'ccadb':
+        'https://ccadb.my.salesforce-sites.com/ccadb/'
+        'AllCertificateRecordsCSVFormatV5',
     }
 
     args = parser.parse_args()
