@@ -222,7 +222,7 @@ class ScmApi:
         base = '/oauth2/access_token'
         url = f'{self.oauth2_url}{base}'
 
-        async with self.session.post(
+        async with session.post(
                 url=url, data=data, auth=auth) as resp:
             text = await resp.text()
 
@@ -282,8 +282,8 @@ class ScmApi:
 
             resp = None
             try:
-                resp = await self.session.request(method, url,
-                                                  headers=headers, **kwargs)
+                resp = await session.request(method, url,
+                                             headers=headers, **kwargs)
                 # force body read/cache inside retry boundary
                 # for possible timeout
                 await resp.text()
