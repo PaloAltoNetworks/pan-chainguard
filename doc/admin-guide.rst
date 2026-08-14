@@ -391,7 +391,9 @@ PAN-OS Root Store Updates
 
 The PAN-OS root store (*Default Trusted Certificate Authorities*) is
 updated as part of a PAN-OS major software releases; it is not
-currently managed by content updates.
+currently managed by content updates.  A feature was added to
+PAN-OS 12.1 to update certificates by content updates; it has
+not been used for an update/refresh as of August 2026.
 
 The root store was updated for PAN-OS 10.0, which was released in
 July 2020.  All 10.x.x releases contain the same root store (10.0.x,
@@ -402,8 +404,12 @@ November 2022.  All 11.x.x releases contain the same root store
 (11.0.x, 11.1.x and 11.2.x).
 
 The root store was not updated for PAN-OS 12.1.2, which was released
-in August 2025.  12.1.2 contains the 11.0 root store from
-November 2022.
+in August 2025.
+
+The root store was not updated for PAN-OS 12.2.2, which was released
+in July 2026.
+
+PAN-OS 12.1.x and 12.2.x contain the 11.0 root store from November 2022.
 
 To use a PAN-OS root store, run the ``fling.py`` program as described
 below.
