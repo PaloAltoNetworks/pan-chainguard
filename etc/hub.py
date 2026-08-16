@@ -532,14 +532,11 @@ def mozilla_root_check(sha256, trust):
             sha256, MOZ, status)
 
     trust_bits = trust.mozilla_trust_bits(sha256=sha256)
-    if trust_bits is None:
-        return False, 'root %s has no %s trust bits' % (
-            sha256, MOZ)
 
     if TrustBits.SERVER_AUTHENTICATION not in trust_bits:
         return False, (
-            'root %s not trusted by %s for Server Authentication' %
-            (sha256, MOZ))
+            'root %s not trusted by %s for Server Authentication; trust bits %s' %
+            (sha256, MOZ, trust_bits))
 
     return True, None
 
