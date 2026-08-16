@@ -524,8 +524,7 @@ def root_ancestor(tree: Tree, sha256: str) -> str:
 def mozilla_root_check(sha256, trust):
     r = trust.get(sha256=sha256)
     if r is None:
-        return False, 'root %s not in %s root trust settings' % (
-            sha256, MOZ)
+        return False, 'root %s not in CCADB root trust settings' % sha256
 
     status = r['Mozilla Status']
     if status != 'Included':
