@@ -15,7 +15,7 @@ fingerprints() {
 	fp=$(echo $fp | sed -e 's/.*=//')
 	fp=$(echo $fp | sed -e 's/://g')
 	echo \"root\",\"$fp\"
-    done
+    done | LC_ALL=C sort -t, -k2,2
 }
 
 if [ $# != 1 ] || [ $1 = '--help' ]; then
