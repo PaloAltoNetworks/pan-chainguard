@@ -52,7 +52,7 @@ def root_status(node):
 
 
 def tree_sort(node):
-    return node.data['Certificate Name'].lower()
+    return node.data['Certificate Name'].casefold()
 
 
 def format_text(tree):
