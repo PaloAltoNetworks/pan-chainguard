@@ -166,7 +166,7 @@ Install pan-chainguard using ``pip``
 pan-chainguard Command Line Programs
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-``pan-chainguard`` provides 7 Python command line programs and a shell
+``pan-chainguard`` provides 8 Python command line programs and a shell
 script:
 
 - ``fling.py`` - Deprecated
@@ -213,6 +213,12 @@ script:
   Command line program which takes as input the JSON file created by
   ``chain.py`` and creates multiple representations of the certificate
   tree, including HTML and text.
+
+- ``ratchet.py``
+
+  Command line program for root store history management and
+  reporting.  Can be used to track root store additions and deletions
+  over time.
 
 - ``link.py``
 
@@ -766,6 +772,60 @@ chainring.py Example
    │   ├── 38392F17CE7B682C198D29C6E71D2740964A2074C8D2558E6CFF64C27823F129 Subject: "COMODO RSA Certification Authority" Issuer: "AAA Certificate Services"
    │   ├── 1286173E6F0102F7BDD32C2F830910953489BF22C16295D84DD90A3DA137164A Subject: "COMODO SHA-2 Pro Series Secure Server CA" Issuer: "AAA Certificate Services"
    │   ├── E11E06861C4D308FD944BF17BE5E9072A034C4F93034CB59C02D512D30F7FC45 Subject: "COMODO SHA-2 Pro Series Secure Server CA" Issuer: "AAA Certificate Services"
+
+ratchet.py
+~~~~~~~~~~
+
+``ratchet.py`` is used to:
+
++ Create and update a JSON root history state file which can be used
+  to track root store additions and deletions over time
+
++ Create documents which describe the root store change history in
+  various formats including:
+
+  + txt - Text
+  + html - Hypertext Markup Language
+  + json - pretty printed JSON
+
+ratchet.py Usage
+................
+
+::
+
+   $ bin/ratchet.py --help
+   usage: ratchet.py [options]
+
+   root store history management and reporting
+
+   options:
+     -h, --help            show this help message and exit
+     --tree PATH           current JSON certificate tree path
+     --previous-tree PATH  previous JSON certificate tree path
+     --history PATH        JSON root history state path
+     --date YYYY-MM-DD     root history date (default: current UTC date)
+     -f, --format {txt,json,html}
+                           root history output format
+     -t, --title TITLE     report title
+     --verbose             enable verbosity
+     --debug {0,1,2,3}     enable debug
+     --version             display version
+
+ratchet.py Example
+..................
+
+::
+
+   $ pwd
+   /home/ksteves/git/pan-chainguard
+
+   $ bin/ratchet.py --history root-history.json -f txt
+   Date       Roots Additions Deletions   Net  Description
+   2026-07-07   230        13         0   +13  root store update
+   2026-06-18   217         0         5    -5  root store update
+   2026-04-16   222         0         1    -1  root store update
+   2026-01-27   223         4         5    -1  root store update
+   2026-01-01   224         -         -     -  initial root store
 
 link.py
 ~~~~~~~

@@ -15,13 +15,17 @@ flowchart TD
     guard("guard.py<br/>update PAN-OS trusted CAs")
     bashguard("bashguard.py<br/>update SCM trusted CAs")
     chainring("chainring.py<br/>certificate tree analysis and reporting")
+    ratchet("ratchet.py<br/>root store history management and reporting")
     curl(curl)
     untar(untar)
     fingerprints(cert-fingerprints.sh)
     rootfingerprintscsv[(root-fingerprints.csv)]
     intfingerprintscsv[(intermediate-fingerprints.csv)]
-	certificatetree[(certificate-tree.json)]
-	treedocs[("certificate documents (txt, html, rst, ...)")]
+    certificatetree[(certificate-tree.json)]
+    previouscertificatetree[("previous</br>certificate-tree.json")]
+    roothistory[(root-history.json)]
+    treedocs[("certificate documents (txt, html, rst, ...)")]
+    roothistorydocs[("root history documents (txt, html, json)")]
     ccadb[("AllCertificateRecordsReport.csv</br>CCADB All Certificate Information")]
     roottrust[("AllIncludedRootCertsCSV.csv</br>CCADB All Included Root Certificate Trust Bits")]
     mozilla[("MozillaIntermediateCerts.csv</br>PublicAllIntermediateCertsWithPEMReport.csv</br>Intermediate CA certificates from Mozilla")]
@@ -47,12 +51,16 @@ flowchart TD
     sprocket-->rootfingerprintscsv
     rootfingerprintscsv-->chain
     chain-->intfingerprintscsv
-	chain-->certificatetree
-	certificatetree-->chainring
-	chainring-->treedocs
+    chain-->certificatetree
+    certificatetree-->chainring
+    chainring-->treedocs
+    certificatetree-->ratchet
+    previouscertificatetree-->ratchet
+    ratchet<-->roothistory
+    ratchet-->roothistorydocs
     rootfingerprintscsv-->link
     intfingerprintscsv-->link
-	curl-->mozilla
+    curl-->mozilla
     mozilla-->link
     oldcertificates-->link
     crtsh-->|API|link
