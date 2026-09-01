@@ -1600,18 +1600,6 @@ Known Issues
      - Description
 
    * - SCM
-     - ADI-56186
-
-     - Certificate import fails with error "Failed to create xml
-       node." when the certificate has an ampersand (&) in its
-       subject.
-
-       This currently affects 11 intermediate certificates.
-
-       **Workaround:**
-       ``bashguard.py`` skips certificates with the import error.
-
-   * - SCM
      - ADI-52964
 
      - In the UI when viewing Custom Certificate Detail, Distinguished
@@ -1662,6 +1650,27 @@ Known Issues
        **Workaround:** There is nothing wrong with the certificate,
        and the error is transient; rerun ``guard.py --update``.  You
        may also need to perform a commit if the error persists.
+
+Previous Issues
+---------------
+
+.. list-table::
+   :header-rows: 1
+   :widths: 10 10 80
+
+   * - Product
+     - Issue ID
+     - Description
+
+   * - SCM
+     - ADI-56186
+
+     - Certificate import fails with error "Failed to create xml
+       node." when the certificate has an ampersand (&) in its
+       subject.
+
+       **Status:**
+       Fixed in Cloud Management Version 2026.r3.0.
 
 About the Name
 --------------
