@@ -152,9 +152,13 @@ def get_certs(path):
             x.update(pubkey_info(cert, warning_messages))
             x.update(extensions(cert, warning_messages))
 
-            if args.verbose and warning_messages:
-                print(f"{sha256}: {'; '.join(warning_messages)}",
-                      file=sys.stderr)
+            if warning_messages:
+                warning_text = '; '.join(warning_messages)
+                x['cert_warnings'] = warning_text
+
+                if args.verbose:
+                    print(f'{sha256}: {warning_text}', file=sys.stderr)
+
             certs.append(x)
 
     return certs
