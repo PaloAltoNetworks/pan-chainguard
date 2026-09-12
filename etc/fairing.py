@@ -296,8 +296,11 @@ def stats(certs):
             x['total_no_authority_key_identifier'] += 1
         if d['subject_key_identifier'] is None:
             x['total_no_subject_key_identifier'] += 1
-        x[f'basic_constraints_pathlen '
-          f"{d['_basic_constraints_pathlen']}"] += 1
+        if d['basic_constraints'] is None:
+            x['total_no_basic_constraints'] += 1
+        else:
+            x[f'basic_constraints_pathlen '
+              f"{d['_basic_constraints_pathlen']}"] += 1
 
     dups = pubkey_duplicates(certs)
     x['total_public_key_duplicates'] = len(dups)
