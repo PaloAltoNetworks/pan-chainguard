@@ -121,15 +121,16 @@ def get_certs(path):
                     sha256, fp), file=sys.stderr)
 
         with warning_cert_context(cert_fingerprint=fp):
+            warning_messages: list[str] = []
+
             common_name_ = common_name(cert.subject)
-            if args.verbose and common_name_ is None:
-                print('%s: No Common Name' % sha256, file=sys.stderr)
+            if common_name_ is None:
+                warning_messages.append('No Common Name')
 
             serial_number = cert.serial_number
-            if args.verbose and serial_number <= 0:
-                print('%s: Serial Number not positive: %d' % (
-                    sha256, serial_number),
-                    file=sys.stderr)
+            if serial_number <= 0:
+                warning_messages.append(
+                    f'Serial Number not positive: {serial_number}')
 
             x = {
                 'cert_fingerprint_sha256': sha256,
@@ -148,8 +149,12 @@ def get_certs(path):
                 'not_valid_after': cert.not_valid_after_utc,
             }
 
-            x.update(pubkey_info(cert))
-            x.update(extensions(cert))
+            x.update(pubkey_info(cert, warning_messages))
+            x.update(extensions(cert, warning_messages))
+
+            if args.verbose and warning_messages:
+                print(f"{sha256}: {'; '.join(warning_messages)}",
+                      file=sys.stderr)
             certs.append(x)
 
     return certs
@@ -163,7 +168,8 @@ def common_name(name: x509.Name) -> Optional[str]:
     return
 
 
-def pubkey_info(cert: x509.Certificate) -> dict:
+def pubkey_info(cert: x509.Certificate,
+                warning_messages: list[str]) -> dict:
     pubkey = cert.public_key()
     pubkey_name = type(pubkey).__name__
 
@@ -181,21 +187,18 @@ def pubkey_info(cert: x509.Certificate) -> dict:
 
     elif isinstance(pubkey, dsa.DSAPublicKey):
         x['public_key_algorithm'] = 'DSA'
-        if args.verbose:
-            print('%s: Deprecated key algorithm: %s' % (
-                fingerprint_sha256(cert), pubkey_name),
-                file=sys.stderr)
+        warning_messages.append(
+            f'Deprecated key algorithm: {pubkey_name}')
     else:
         x['public_key_algorithm'] = pubkey_name
-        if args.verbose:
-            print('%s: Unknown key algorithm: %s' % (
-                fingerprint_sha256(cert), pubkey_name),
-                file=sys.stderr)
+        warning_messages.append(
+            f'Unknown key algorithm: {pubkey_name}')
 
     return x
 
 
-def extensions(cert: x509.Certificate) -> dict:
+def extensions(cert: x509.Certificate,
+               warning_messages: list[str]) -> dict:
     def basic_constraints_pathlen(bc: x509.BasicConstraints) -> Optional[int]:
         return bc.path_length
 
@@ -242,13 +245,10 @@ def extensions(cert: x509.Certificate) -> dict:
         try:
             value = cert.extensions.get_extension_for_class(extcls).value
         except x509.ExtensionNotFound:
-            if args.verbose:
-                print(f'{fingerprint_sha256(cert)}: No {label}',
-                      file=sys.stderr)
+            warning_messages.append(f'No {label}')
             continue
         except x509.DuplicateExtension as e:
-            print(f'{fingerprint_sha256(cert)}: Duplicate {label}: {e}',
-                  file=sys.stderr)
+            warning_messages.append(f'Duplicate {label}: {e}')
             continue
 
         for name, func in v[1]:
