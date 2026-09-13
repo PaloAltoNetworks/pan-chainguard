@@ -1,6 +1,87 @@
 Release History
 ===============
 
+0.15.0 (2026-09-13)
+-------------------
+
+- bin/bashguard.py, bin/guard.py: Fix redundant assignment.
+
+- etc/fairing.py: Enhancements for --stats and --show.
+
+- bin/ratchet.py: New program to create and update a JSON root history
+  state file which can be used to track root store additions and
+  deletions over time.
+
+- bin/chainring.py: Use casefold() vs. lower() for sort.
+
+- bin/cert-fingerprints.sh: Sort by sha256.
+
+- etc/hub.py: Remove redundant check and include trust bits.
+
+- etc/hub.py: Trust settings not mozilla specific.
+
+- pan_chainguard/scm_apy.py: Use returned session for clarity.
+
+- pan_chainguard/ccadb.py: Fix combined certificate validity check.
+
+  valid_from_to() used boolean and on tuple return values, causing the
+  valid_from() result to be ignored.  Return an invalid valid-from result
+  before checking valid-to.
+
+- etc/hub.py: Enhancements to categorise "missing in pan-chainguard"
+  differences.
+
+- bin/bashguard.py: Print warning on credentials permissions.
+  Allow group read, but warn for group write/execute or other access.
+
+- bin/bashguard.py: Stricter credentials file validation.
+
+- bin/bashguard.py: Protect for KeyError.
+
+- bin/bashguard.py: Add --xml option.
+  The XML document can be used to "load config partial" on PAN-OS.
+
+- bin/chainring.py: Use tree.all_nodes().
+
+- bin/chainring.py: exit 1 when a fingerprint lookup fails.
+
+- bin/chainring.py: Don't allow empty fingerprint.
+
+- bin/chainring.py: Prefix in fingerprint lookup sha256 should be case
+  insensitive.
+
+- bin/chainring.py: --depth should limit only generated output.
+
+- bin/bashguard.py, bin/guard.py: Rework setting expired cert value.
+
+- bin/guard.py: Fix to return dict when no certs.
+
+- pan_chainguard/scm_api.py: format not optional bug fixed.
+
+- pan_chainguard/scm_api.py: Verify token response is dict.
+
+- pan_chainguard/scm_api.py: Parse the already-read token response body.
+
+- pan_chainguard/scm_api.py: Guard for KeyError.
+
+- pan_chainguard/scm_api.py: id required.
+
+- pan_chainguard/scm_api.py: Use correct argument.
+
+- pan_chainguard/scm_api.py: Fix data type annotations.
+
+- pan_chainguard/scm_api.py: Fix key compare and redact vs. exclude.
+
+- bin/bashguard.py, pan_chainguard/scm_api.py: Add print JSON Web
+  Token option.
+
+- bin/bashguard.py: Get certificates after delete to allow delete then
+  update.  For testing, not an expected use case.
+
+- pan_chainguard/scm_api.py: Retry timeout error.
+
+- Documentation fixes and improvements.
+
 0.14.0 (2026-07-14)
 -------------------
 
