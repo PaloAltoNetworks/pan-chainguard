@@ -387,7 +387,6 @@ def get_certs(xapi, xpath):
             issuer_cn = None
             match = progcn.search(issuer)
             if match:
-                issuer_cn = match.group(1)
                 issuer_cn = re.sub(r'\\(.)', r'\1', match.group(1))
 
             elem = entry.find('./expiry-epoch')
