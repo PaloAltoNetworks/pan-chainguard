@@ -70,6 +70,7 @@ args = None
 
 class XmlOptions(IntFlag):
     PANORAMA_NAMES = 0o001
+    INCLUDE_UUID = 0o002
 
 
 class Description(Enum):
@@ -332,6 +333,8 @@ def show_xml(data, options=XmlOptions(0), pretty=False):
 
         certificate_names.append(name)
         entry = ET.SubElement(certificate, 'entry', {'name': name})
+        if options & XmlOptions.INCLUDE_UUID:
+            entry.set('uuid', obj['id'])
 
         for key in CERTIFICATE_XML_KEYS:
             if key not in obj:
@@ -939,7 +942,10 @@ def parse_args():
                         type=xml_options,
                         metavar='MASK',
                         help=(f'show {title} managed certificates in XML\n'
-                              '001 use Panorama-compatible certificate names'))
+                              '001 use Panorama-compatible certificate '
+                              'names\n'
+                              '002 include uuid attribute on certificate '
+                              'entries'))
     parser.add_argument('--jwt',
                         action='store_true',
                         help='print JSON Web Token')
