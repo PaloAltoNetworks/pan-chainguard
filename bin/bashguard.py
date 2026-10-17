@@ -50,15 +50,15 @@ import pan_chainguard.util
 NAME_RE = pan_chainguard.util.NAME_RE_SCM
 
 CERTIFICATE_XML_KEYS = (
+    'subject_hash',
+    'issuer_hash',
+    'not_valid_before',
     'issuer',
     'not_valid_after',
     'common_name',
     'expiry_epoch',
-    'subject',
-    'subject_hash',
-    'issuer_hash',
-    'not_valid_before',
     'ca',
+    'subject',
     'public_key',
     'algorithm',
     #  'common_name_int',
