@@ -49,6 +49,16 @@ SOURCES_MAP = {
     'microsoft': RootStatusBits.MICROSOFT,
 }
 
+BLOCKED_ROOTS = [
+    # eMudhra incident: https://bugzilla.mozilla.org/show_bug.cgi?id=2083449
+    # emSign Root TLS CA - G3
+    '7DD78D5F4F13459A83DFF9ABBBA62EDBAF6F2D102BF257FD712F4D9F2746ED8D',
+    # emSign ECC Root CA - G3
+    '86A1ECBA089C4A8D3BBE2734C612BA341D813E043CF9E8A862CD5C57A36BBE6B',
+    # AAA Certificate Services
+    'D7A7A0FB5D7E2731D771E9484EBCDEF71D5F0C3E0A2948782BC83EE0EA699EF4',
+]
+
 args = None
 
 
@@ -123,6 +133,11 @@ def read_certs():
                     x = '%s %s %s' % (err, sha256, name)
                     if args.debug > 2:
                         print(x, file=sys.stderr)
+                    continue
+
+                if sha256 in BLOCKED_ROOTS:
+                    if args.debug > 0:
+                        print('blocked', sha256, name, file=sys.stderr)
                     continue
 
                 certs[sha256] = row
