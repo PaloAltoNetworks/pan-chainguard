@@ -1,6 +1,19 @@
 Release History
 ===============
 
+0.16.0 (2026-10-30)
+-------------------
+
+- etc/derailer.py: Skip union and intersection for single vendor.
+
+- bin/sprocket.py: Add root CA blocklist for eMudhra incident.
+
+- bin/bashguard.py: Order XML fields same as SCM snippet extract
+  content XML.
+
+- bin/bashguard.py: Add xml mask bit to include uuid attribute on
+  certificate entries.
+
 0.15.0 (2026-09-13)
 -------------------
 
