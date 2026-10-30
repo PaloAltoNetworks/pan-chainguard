@@ -127,6 +127,9 @@ async def main_loop():
                     if args.verbose:
                         print(f'Saved {x.__name__} to {path}')
 
+    if len(vendors_0) < 2:
+        return
+
     sets = vendors_0.values()
     vendors_ = ', '.join(sorted(vendors_0.keys()))
 
