@@ -23,7 +23,7 @@ import re
 import tarfile
 import time
 import treelib
-from typing import ContextManager, Optional, TextIO, Union
+from typing import Iterator, Optional, TextIO, Union
 
 NAME_PREFIX = 'LINK-'
 NAME_RE = r'^%s%s$' % (NAME_PREFIX, '[A-F0-9]{26,26}')
@@ -43,7 +43,7 @@ def open_csv_source(
         source: Union[str, bytes],
         *,
         encoding: str = 'utf-8'
-) -> ContextManager[TextIO]:
+) -> Iterator[TextIO]:
     if isinstance(source, str):
         f = open(source, 'r', encoding=encoding, newline='')
         try:
