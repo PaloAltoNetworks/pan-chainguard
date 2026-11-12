@@ -20,7 +20,9 @@ import csv
 import io
 import os
 import re
+import stat
 import tarfile
+import tempfile
 import time
 import treelib
 from typing import Iterator, Optional, TextIO, Union
@@ -57,6 +59,58 @@ def open_csv_source(
             yield tio
         finally:
             tio.close()
+
+
+@contextmanager
+def atomic_write(
+        path: Union[str, os.PathLike[str]],
+        *,
+        encoding: str = 'utf-8',
+        newline: Optional[str] = None,
+) -> Iterator[TextIO]:
+    # Resolve symlinks so we replace the target, not the link itself.
+    path = os.path.realpath(path)
+    temp_path: Optional[str] = None
+
+    try:
+        with tempfile.NamedTemporaryFile(
+                mode='w',
+                encoding=encoding,
+                newline=newline,
+                dir=os.path.dirname(path),
+                prefix='.%s.' % os.path.basename(path),
+                suffix='.tmp',
+                delete=False) as f:
+            temp_path = f.name
+
+            # NamedTemporaryFile creates 0600; match what open(path, 'w')
+            # would have given: the existing file's mode, or 0666 & ~umask
+            # for a new file.
+            try:
+                mode = stat.S_IMODE(os.stat(path).st_mode)
+            except FileNotFoundError:
+                # XXX umask is process-wide; temporarily clearing it is
+                # unsafe if another thread creates a file concurrently.
+                umask = os.umask(0)
+                os.umask(umask)
+                mode = 0o666 & ~umask
+            os.chmod(temp_path, mode)
+
+            yield f
+
+            # Flush and sync file contents before replacement.
+            f.flush()
+            os.fsync(f.fileno())
+
+        os.replace(temp_path, path)
+        temp_path = None  # replaced; nothing left to clean up
+    finally:
+        if temp_path is not None:
+            try:
+                os.unlink(temp_path)
+            except OSError:
+                # Cleanup must not mask the original exception.
+                pass
 
 
 def s1_in_s2(s1: str, s2: Union[str, list[str]]) -> bool:

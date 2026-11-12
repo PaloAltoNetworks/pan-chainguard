@@ -230,7 +230,7 @@ def root_history_load(path):
 
 def root_history_save(path, history):
     try:
-        with open(path, 'w') as f:
+        with pan_chainguard.util.atomic_write(path) as f:
             json.dump(history, f, separators=(',', ':'))
             f.write('\n')
     except OSError as e:
