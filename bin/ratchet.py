@@ -138,7 +138,7 @@ def root_history_validate(history):
         raise ValueError('root history is not an object')
 
     version = history.get('version')
-    if version != ROOT_HISTORY_VERSION:
+    if type(version) is not int or version != ROOT_HISTORY_VERSION:
         raise ValueError('unsupported root history version: %r' % version)
 
     events = history.get('events')
