@@ -22,6 +22,7 @@ import hashlib
 from html import escape
 import json
 import os
+import re
 import sys
 
 
@@ -173,10 +174,11 @@ def root_history_validate(history):
                 (idx + 1))
 
         root_set_sha256_ = event.get('root_set_sha256')
-        if not isinstance(root_set_sha256_, str):
+        if (not isinstance(root_set_sha256_, str) or
+                not re.fullmatch(r'[0-9a-f]{64}', root_set_sha256_)):
             raise ValueError(
-                'root history event %d root_set_sha256 is not a string' %
-                (idx + 1))
+                'root history event %d root_set_sha256 is not a'
+                ' lowercase hex SHA-256 digest' % (idx + 1))
 
         for name in ('added', 'deleted'):
             items = event.get(name)
