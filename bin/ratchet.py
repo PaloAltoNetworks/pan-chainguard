@@ -208,6 +208,9 @@ def root_history_validate(history):
                             'root history event %d %s item %d'
                             ' %s is not a string' %
                             (idx + 1, name, item_idx + 1, field))
+            if idx == 0 and items:
+                raise ValueError(
+                    'root history event 1 (initial) %s is not empty' % name)
 
         description = event.get('description')
         if not isinstance(description, str):
