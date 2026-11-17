@@ -168,6 +168,10 @@ def root_history_validate(history):
             raise ValueError(
                 'invalid root history event %d date: %r' %
                 (idx + 1, date)) from e
+        if idx > 0 and date < events[idx - 1]['date']:
+            raise ValueError(
+                'root history event %d date %s is before event %d date %s' %
+                (idx + 1, date, idx, events[idx - 1]['date']))
 
         roots = event.get('roots')
         if (not isinstance(roots, int) or isinstance(roots, bool) or
@@ -292,6 +296,11 @@ def root_history_update(history, previous_tree, tree, date):
     # has already been written to the history file.
     if current_sha256 == expected_sha256:
         return False
+
+    if date < current_event['date']:
+        raise ValueError(
+            'root history date %s is before current event date %s' %
+            (date, current_event['date']))
 
     expected = current_event['roots']
     if len(previous_roots) != expected:
