@@ -218,6 +218,17 @@ def root_history_validate(history):
                 'root history event %d description is not a string' %
                 (idx + 1))
 
+        if idx > 0:
+            previous_roots = events[idx - 1]['roots']
+            expected = (previous_roots + len(event['added']) -
+                        len(event['deleted']))
+            if roots != expected:
+                raise ValueError(
+                    'root history event %d roots is %d, expected %d'
+                    ' (previous %d + added %d - deleted %d)' %
+                    (idx + 1, roots, expected, previous_roots,
+                     len(event['added']), len(event['deleted'])))
+
 
 def root_history_load(path):
     if not os.path.exists(path):
