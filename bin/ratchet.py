@@ -122,8 +122,11 @@ def root_certificates(tree):
         if (isinstance(data, dict) and
                 data.get('Certificate Record Type') == 'Root Certificate'):
             sha256 = node.identifier
-            if not isinstance(sha256, str):
-                raise ValueError('root certificate identifier is not a string')
+            if (not isinstance(sha256, str) or
+                    not re.fullmatch(r'[0-9A-F]{64}', sha256)):
+                raise ValueError(
+                    'root certificate identifier is not an uppercase hex'
+                    ' SHA-256 digest: %r' % (sha256,))
             roots[sha256] = certificate_item(node)
 
     return roots
@@ -192,10 +195,11 @@ def root_history_validate(history):
                         'root history event %d %s item %d is not an object' %
                         (idx + 1, name, item_idx + 1))
                 sha256 = item.get('sha256')
-                if not isinstance(sha256, str):
+                if (not isinstance(sha256, str) or
+                        not re.fullmatch(r'[0-9A-F]{64}', sha256)):
                     raise ValueError(
                         'root history event %d %s item %d'
-                        ' sha256 is not a string' %
+                        ' sha256 is not an uppercase hex SHA-256 digest' %
                         (idx + 1, name, item_idx + 1))
                 for field in CERT_ITEM_FIELDS:
                     value = item.get(field)
