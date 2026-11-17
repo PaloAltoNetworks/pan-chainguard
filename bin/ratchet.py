@@ -186,6 +186,11 @@ def root_history_validate(history):
             raise ValueError(
                 'root history event %d root_set_sha256 is not a'
                 ' lowercase hex SHA-256 digest' % (idx + 1))
+        if (idx > 0 and
+                root_set_sha256_ == events[idx - 1]['root_set_sha256']):
+            raise ValueError(
+                'root history event %d root_set_sha256 is unchanged from'
+                ' event %d' % (idx + 1, idx))
 
         for name in ('added', 'deleted'):
             items = event.get(name)
