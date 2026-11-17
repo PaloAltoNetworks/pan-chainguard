@@ -192,6 +192,7 @@ def root_history_validate(history):
                 'root history event %d root_set_sha256 is unchanged from'
                 ' event %d' % (idx + 1, idx))
 
+        seen = {}
         for name in ('added', 'deleted'):
             items = event.get(name)
             if not isinstance(items, list):
@@ -210,6 +211,13 @@ def root_history_validate(history):
                         'root history event %d %s item %d'
                         ' sha256 is not an uppercase hex SHA-256 digest' %
                         (idx + 1, name, item_idx + 1))
+                if sha256 in seen:
+                    raise ValueError(
+                        'root history event %d %s item %d sha256 %s'
+                        ' duplicates %s item %d' %
+                        ((idx + 1, name, item_idx + 1, sha256) +
+                         seen[sha256]))
+                seen[sha256] = (name, item_idx + 1)
                 for field in CERT_ITEM_FIELDS:
                     value = item.get(field)
                     if value is not None and not isinstance(value, str):
